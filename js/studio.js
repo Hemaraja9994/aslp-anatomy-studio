@@ -128,21 +128,50 @@ function renderParts() {
     return;
   }
   const unique = [...new Set(meshes.map((m) => m.userData.label).filter(Boolean))].sort();
-  els.parts.innerHTML = unique.map((name) =>
-    `<button class="part${selected && selected.userData.label === name ? " on" : ""}" data-part="${name}">${name}</button>`
-  ).join("");
-  els.parts.querySelectorAll("[data-part]").forEach((btn) => {
-    btn.onclick = () => isolateByName(btn.dataset.part);
-  });
+  els.parts.innerHTML = unique.map((name) => {
+    const on = selected && selected.userData.label === name ? " on" : "";
+    return `<button class="part${on}" type="button" data-part="${encodeURIComponent(name)}">${esc(name)}</button>`;
+  }).join("");
   const host = document.getElementById("worldLabels");
   if (host) {
     host.innerHTML = unique.map((name) =>
-      `<button class="wlab" type="button" data-part="${name}" title="Tap for a teaching note">${name}</button>`
+      `<button class="wlab" type="button" data-part="${encodeURIComponent(name)}" title="Tap for a teaching note">${esc(name)}</button>`
     ).join("");
-    host.querySelectorAll("[data-part]").forEach((btn) => {
-      btn.onclick = () => isolateByName(btn.dataset.part);
-    });
   }
+}
+
+function readPartName(el) {
+  const btn = el && el.closest ? el.closest("[data-part]") : null;
+  if (!btn) return "";
+  const raw = btn.getAttribute("data-part") || "";
+  try { return decodeURIComponent(raw); } catch (err) { return (btn.textContent || "").trim(); }
+}
+
+function bindLabelClicks() {
+  const hit = (e) => {
+    const btn = e.target.closest("[data-part]");
+    if (!btn) return null;
+    if (!btn.closest("#worldLabels, #partsList")) return null;
+    return btn;
+  };
+  let last = 0;
+  const go = (e) => {
+    const btn = hit(e);
+    if (!btn) return;
+    e.preventDefault();
+    e.stopPropagation();
+    const now = Date.now();
+    if (now - last < 350) return;
+    last = now;
+    const name = readPartName(btn);
+    if (name) isolateByName(name);
+  };
+  document.addEventListener("pointerdown", (e) => {
+    if (!hit(e)) return;
+    e.stopPropagation();
+  }, true);
+  document.addEventListener("pointerup", go, true);
+  document.addEventListener("click", go, true);
 }
 
 function applyLayers() {
@@ -171,8 +200,10 @@ function syncLabels() {
   const w = canvas.clientWidth || 1;
   const h = canvas.clientHeight || 1;
   const tmp = new THREE.Vector3();
+  const placed = [];
   host.querySelectorAll("[data-part]").forEach((btn) => {
-    const mesh = (root.userData.named || []).find((m) => m.userData.label === btn.dataset.part && m.visible);
+    const name = readPartName(btn);
+    const mesh = (root.userData.named || []).find((m) => m.userData.label === name && m.visible);
     if (!mesh) {
       btn.style.display = "none";
       return;
@@ -184,14 +215,24 @@ function syncLabels() {
       return;
     }
     box.getCenter(tmp).project(camera);
-    if (tmp.z > 1) {
+    if (tmp.z > 1 || tmp.x < -1.15 || tmp.x > 1.15 || tmp.y < -1.15 || tmp.y > 1.15) {
       btn.style.display = "none";
       return;
     }
+    let x = (tmp.x * 0.5 + 0.5) * w;
+    let y = (-tmp.y * 0.5 + 0.5) * h;
+    x = Math.min(w - 16, Math.max(16, x));
+    y = Math.min(h - 16, Math.max(22, y));
+    for (let k = 0; k < 10; k++) {
+      const clash = placed.some((p) => Math.abs(p.x - x) < 86 && Math.abs(p.y - y) < 20);
+      if (!clash) break;
+      y = y > 36 ? y - 20 : y + 20;
+    }
+    placed.push({ x, y });
     btn.style.display = "block";
-    btn.style.left = ((tmp.x * 0.5 + 0.5) * w) + "px";
-    btn.style.top = ((-tmp.y * 0.5 + 0.5) * h) + "px";
-    btn.classList.toggle("on", !!(selected && selected.userData.label === btn.dataset.part));
+    btn.style.left = x + "px";
+    btn.style.top = y + "px";
+    btn.classList.toggle("on", !!(selected && selected.userData.label === readPartName(btn)));
   });
 }
 
@@ -209,21 +250,22 @@ function clearHighlight() {
 
 function isolateByName(name) {
   const meshes = (root.userData.named || []).filter((m) => m.userData.label === name);
-  if (!meshes.length) return;
-  selected = meshes[0];
-  if (selected.userData.layer === "clinic") {
+  selected = meshes[0] || null;
+  if (selected && selected.userData.layer === "clinic") {
     layersState.clinic = true;
     document.querySelector('[data-layer="clinic"]')?.classList.add("on");
   }
-  clearHighlight();
-  (root.userData.named || []).forEach((m) => {
-    const on = m.userData.label === name;
-    if (m.material) {
-      m.material.transparent = true;
-      m.material.opacity = on ? 1 : 0.07;
-      if (on && m.material.emissive) m.material.emissive.setHex(appearance === "atlas" ? 0x3d2611 : 0x3a2414);
-    }
-  });
+  if (meshes.length) {
+    clearHighlight();
+    (root.userData.named || []).forEach((m) => {
+      const on = m.userData.label === name;
+      if (m.material) {
+        m.material.transparent = true;
+        m.material.opacity = on ? 1 : 0.07;
+        if (on && m.material.emissive) m.material.emissive.setHex(appearance === "atlas" ? 0x3d2611 : 0x3a2414);
+      }
+    });
+  }
   showExplain(name, selected);
   renderParts();
 }
@@ -767,6 +809,7 @@ function bind() {
   document.querySelectorAll("[data-click]").forEach((btn) => {
     btn.onclick = () => document.getElementById(btn.dataset.click)?.click();
   });
+  bindLabelClicks();
   bindDrawers();
 }
 

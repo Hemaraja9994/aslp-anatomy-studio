@@ -157,7 +157,7 @@
     const step = Math.max(1, Math.floor(all.length / limit));
     const pins = all.filter((_, i) => i % step === 0).slice(0, limit).map((b, i) => ({
       n: i + 1,
-      name: b.dataset.part,
+      name: (b.textContent || "").trim() || b.dataset.part,
       x: (parseFloat(b.style.left) / (rect.width || 1)) * 100,
       y: (parseFloat(b.style.top) / (rect.height || 1)) * 100
     }));
