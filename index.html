@@ -25,7 +25,7 @@
       <div class="brand">
         <div class="logo">AS</div>
         <div>
-          <h1>Audiology &amp; Speech-Language Pathology — Anatomy Studio<span class="short">ASLP</span></h1>
+          <h1><span class="full-title">Audiology &amp; Speech-Language Pathology — Anatomy Studio</span><span class="short">ASLP</span></h1>
           <p>Dissection-grade 3D for audiology and speech-language pathology</p>
         </div>
       </div>
@@ -42,7 +42,7 @@
       </div>
     </header>
     <div class="layout">
-      <aside class="rail">
+      <aside class="rail" id="rail" aria-label="Curriculum modules">
         <div class="panel-head">
           <h2>Modules</h2>
           <span class="count">17 · RCI 2024-25</span>
@@ -53,10 +53,10 @@
       <section class="stage">
         <canvas id="view"></canvas>
         <div class="toolbar">
-          <button class="btn" id="btnReset">Reset scene</button>
-          <button class="btn primary" id="btnPlay">Play physiology</button>
-          <button class="btn" id="btnClinic">Clinic overlay</button>
-          <button class="btn" id="btnSide">Right side</button>
+          <button class="btn" id="btnReset">Reset<span class="btn-rest"> scene</span></button>
+          <button class="btn primary" id="btnPlay">Play<span class="btn-rest"> physiology</span></button>
+          <button class="btn" id="btnClinic">Clinic<span class="btn-rest"> overlay</span></button>
+          <button class="btn" id="btnSide">Right<span class="btn-rest"> side</span></button>
           <button class="btn primary" id="btnLook">Photoreal</button>
         </div>
         <div class="stage-tools">
@@ -93,7 +93,13 @@
           </div>
         </div>
       </section>
-      <aside class="side">
+      <aside class="side" id="sidePanel" aria-label="Layers and learning">
+        <div class="sheet-tools">
+          <button class="btn" type="button" data-click="btnSheets">Print sheets</button>
+          <button class="btn" type="button" data-click="btnTweaks">Tweaks</button>
+          <button class="btn" type="button" data-export>Export logbook</button>
+          <label class="btn ghost"><input type="checkbox" id="liteModeSheet" /> Lite mode</label>
+        </div>
         <div class="panel-head">
           <h2>Layers</h2>
         </div>
@@ -145,6 +151,12 @@
       </div>
       <div class="cred-fine">Meshes: BodyParts3D / Z-Anatomy (CC BY-SA). Educational use only, not for surgical navigation.</div>
     </footer>
+    <div class="drawer-mask" id="drawerMask" hidden></div>
+    <nav class="mobile-dock" id="mobileDock" aria-label="Studio navigation">
+      <button class="btn" id="btnModules" type="button" aria-controls="rail" aria-expanded="false">Modules</button>
+      <button class="btn" id="btnDockHome" type="button">Home</button>
+      <button class="btn" id="btnLearn" type="button" aria-controls="sidePanel" aria-expanded="false">Learn</button>
+    </nav>
   </div>
   <aside class="tweaks" id="tweaks"></aside>
   <div class="faculty" id="faculty"></div>

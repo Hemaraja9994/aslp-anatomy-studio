@@ -545,7 +545,7 @@ function bindDrawers() {
   document.addEventListener("keydown", (e) => {
     if (e.key === "Escape") closeDrawers();
   });
-  window.matchMedia("(min-width: 1101px)").addEventListener("change", (e) => {
+  window.matchMedia("(min-width: 1041px)").addEventListener("change", (e) => {
     if (e.matches) closeDrawers();
   });
 }
@@ -644,6 +644,9 @@ function bind() {
     if (appearance === "photoreal") return;
     scene.background = new THREE.Color(stageColor);
     if (scene.fog) scene.fog.color.setHex(stageColor);
+  });
+  document.querySelectorAll("[data-click]").forEach((btn) => {
+    btn.onclick = () => document.getElementById(btn.dataset.click)?.click();
   });
   bindDrawers();
 }
