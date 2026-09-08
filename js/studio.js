@@ -345,6 +345,7 @@ function showTab(name) {
       </div>
       <div class="panel-block">
         <h3>Source</h3>
+        <p>Concept and designed by Hemaraja Nayaka. S.</p>
         <p>Dissection meshes from BodyParts3D / Z-Anatomy (CC BY-SA). Photoreal look is original tissue shading on those reconstructions — not cadaver photographs and not Elsevier Complete Anatomy. Educational use only. Not for surgical navigation.</p>
       </div>`
   };

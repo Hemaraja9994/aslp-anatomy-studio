@@ -1,5 +1,7 @@
 # ASLP Anatomy Studio
 
+**Concept and designed by Hemaraja Nayaka. S**
+
 Browser-based 3D teaching studio for **B.ASLP (RCI 2024–25)** and postgraduate audiology / speech-language pathology.
 
 Version 1.3 is the complete curriculum studio: **17 RCI modules**, photoreal tissue shading on BodyParts3D / Z-Anatomy meshes, physiology animation, clinic/device overlays (CI path, BTE aid, BAHA site, otoscope window, TEP/stoma, ABI, MCA territory), on-model labels, and UG/PG worksheets plus OSCE stations.

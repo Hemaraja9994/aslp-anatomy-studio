@@ -40,6 +40,12 @@ button { cursor: pointer; }
 }
 .brand h1 { margin: 0; font-size: 17px; letter-spacing: 0.02em; }
 .brand p { margin: 0; color: var(--muted); font-size: 12px; font-family: "IBM Plex Sans", sans-serif; }
+.brand .credit {
+  margin-top: 3px;
+  color: var(--accent);
+  font-size: 11px;
+  letter-spacing: 0.03em;
+}
 
 .top-actions { display: flex; gap: 8px; flex-wrap: wrap; }
 .btn {
@@ -204,6 +210,19 @@ button { cursor: pointer; }
 .hero { max-width: 980px; }
 .hero h2 { font-size: 42px; margin: 0 0 10px; line-height: 1.15; }
 .hero p { font-size: 18px; color: #d7e2f1; max-width: 760px; }
+.hero .byline {
+  font-size: 15px;
+  color: var(--accent);
+  font-family: "IBM Plex Sans", sans-serif;
+  letter-spacing: 0.02em;
+  margin: 0 0 16px;
+}
+.credit-line {
+  margin-top: 10px;
+  color: var(--accent);
+  font-size: 12px;
+  font-family: "IBM Plex Sans", sans-serif;
+}
 .grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));

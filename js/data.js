@@ -2,7 +2,7 @@ window.STUDIO_DATA = {
   product: {
     name: "ASLP Anatomy Studio",
     version: "1.3.0",
-    note: "Complete RCI studio: photoreal dissection meshes, physiology and clinic overlays. Not a surgical navigator."
+    note: "Complete RCI studio: photoreal dissection meshes, physiology and clinic overlays. Concept and designed by Hemaraja Nayaka. S. Not a surgical navigator."
   },
   modules: [
     {

@@ -1,5 +1,7 @@
 # Anatomy mesh attribution
 
+**Concept and designed by Hemaraja Nayaka. S**
+
 ASLP Anatomy Studio does **not** use Elsevier Complete Anatomy assets.
 Dissection meshes are loaded at runtime from open scientific atlases.
 The photoreal look is original tissue shading (triplanar maps + PBR) applied
