@@ -40,6 +40,8 @@ let appearance = "photoreal";
 let stageColor = 0x16110d;
 let labTable, labGrid;
 const cutPlane = new THREE.Plane(new THREE.Vector3(-1, 0, 0), 0.02);
+const clipBox = new THREE.Box3();
+const clipCorner = new THREE.Vector3();
 
 function toast(msg) {
   els.toast.textContent = msg;
@@ -104,6 +106,7 @@ function applyLayers() {
   if (renderer) renderer.clippingPlanes = layersState.cut ? [cutPlane] : [];
   const labelHost = document.getElementById("worldLabels");
   if (labelHost) labelHost.style.display = layersState.labels ? "block" : "none";
+  updateClipBounds();
 }
 
 function syncLabels() {
@@ -250,10 +253,26 @@ function namedBox(meshes) {
   return box;
 }
 
+function updateClipBounds() {
+  if (!root) {
+    clipBox.makeEmpty();
+    return;
+  }
+  const box = namedBox(root.userData.named);
+  if (box.isEmpty()) {
+    clipBox.makeEmpty();
+    return;
+  }
+  clipBox.copy(box);
+  const pad = Math.max(box.getSize(clipCorner).length() * 0.04, 0.04);
+  clipBox.expandByScalar(pad);
+}
+
 function fitCamera() {
   if (!controls || !root) return;
   root.updateWorldMatrix(true, true);
-  const box = namedBox(root.userData.named);
+  updateClipBounds();
+  const box = clipBox.isEmpty() ? namedBox(root.userData.named) : clipBox;
   if (box.isEmpty()) return;
   const sizeVec = box.getSize(new THREE.Vector3());
   const size = sizeVec.length();
@@ -275,16 +294,35 @@ function fitCamera() {
 
 function syncLens() {
   if (!camera || !controls) return;
-  const dist = camera.position.distanceTo(controls.target);
-  const near = THREE.MathUtils.clamp(dist / 120, 0.002, 0.35);
-  const far = Math.max(60, dist * 30, controls.maxDistance * 3);
+  camera.updateMatrixWorld(true);
+  let zMin = Infinity;
+  let zMax = -Infinity;
+  if (!clipBox.isEmpty()) {
+    const min = clipBox.min;
+    const max = clipBox.max;
+    const inv = camera.matrixWorldInverse;
+    for (let i = 0; i < 8; i++) {
+      clipCorner.set(i & 1 ? max.x : min.x, i & 2 ? max.y : min.y, i & 4 ? max.z : min.z).applyMatrix4(inv);
+      const z = -clipCorner.z;
+      if (z < zMin) zMin = z;
+      if (z > zMax) zMax = z;
+    }
+  } else {
+    const dist = camera.position.distanceTo(controls.target);
+    zMin = dist * 0.25;
+    zMax = dist * 4;
+  }
+  let near = zMin > 0.08 ? zMin * 0.25 : 0.001;
+  near = THREE.MathUtils.clamp(near, 0.001, 1.5);
+  let far = Math.max(zMax * 2.2, zMin + 4, controls.maxDistance * 1.8, 24);
+  if (far / near > 10000) near = far / 10000;
   if (camera.near !== near || camera.far !== far) {
     camera.near = near;
     camera.far = far;
     camera.updateProjectionMatrix();
   }
   if (scene && scene.fog) {
-    scene.fog.near = Math.max(dist * 8, far * 0.55);
+    scene.fog.near = Math.max(zMax * 2.4, far * 0.72);
     scene.fog.far = far;
   }
 }
@@ -438,8 +476,8 @@ function initThree() {
   const canvas = document.getElementById("view");
   scene = new THREE.Scene();
   scene.background = new THREE.Color(0x16110d);
-  scene.fog = new THREE.Fog(0x16110d, 40, 160);
-  camera = new THREE.PerspectiveCamera(45, 1, 0.02, 200);
+  scene.fog = new THREE.Fog(0x16110d, 80, 220);
+  camera = new THREE.PerspectiveCamera(45, 1, 0.01, 400);
   camera.position.set(0.4, 0.2, 4.6);
   renderer = new THREE.WebGLRenderer({ canvas, antialias: !els.lite.checked, alpha: false, preserveDrawingBuffer: true });
   renderer.setPixelRatio(els.lite.checked ? 1 : Math.min(window.devicePixelRatio, 2));
