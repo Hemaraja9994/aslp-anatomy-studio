@@ -63,7 +63,7 @@
           <button class="icon-btn" id="btnRailToggle" title="Hide module rail" aria-label="Hide module rail">◧</button>
           <button class="icon-btn" id="btnSideToggle" title="Hide teaching panel" aria-label="Hide teaching panel">◨</button>
         </div>
-        <div class="pick-label" id="pickLabel"></div>
+        <div class="explain" id="pickLabel" hidden></div>
         <div class="world-labels" id="worldLabels"></div>
         <div class="stage-caption">
           <div class="card">
@@ -117,11 +117,12 @@
         </div>
         <div class="panel-head">
           <h2>Dissection parts</h2>
-          <span class="count">click to isolate</span>
+          <span class="count">click a label for notes</span>
         </div>
         <div class="parts" id="partsList">
-          <p class="muted">Open a module to list reconstructed parts. Click a name or the 3D mesh to isolate it.</p>
+          <p class="muted">Open a module to list reconstructed parts. Click a name, a 3D label, or the mesh for a teaching note.</p>
         </div>
+        <div class="part-explain" id="partExplain" hidden></div>
         <div class="tabs">
           <button class="btn active" data-tab="learn">Learn</button>
           <button class="btn" data-tab="workbook">Workbook</button>

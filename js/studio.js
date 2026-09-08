@@ -5,6 +5,7 @@ import { StudioAtlas } from "./atlas.js";
 import { attachPhysiology } from "./physiology.js";
 import { attachClinic } from "./clinic.js";
 import { Tissue } from "./tissue.js";
+import { explainPart } from "./glossary.js";
 
 window.THREE = THREE;
 
@@ -49,6 +50,53 @@ function toast(msg) {
   setTimeout(() => { els.toast.style.display = "none"; }, 2600);
 }
 
+function esc(s) {
+  return String(s ?? "").replace(/[&<>"]/g, (c) => "&#" + c.charCodeAt(0) + ";");
+}
+
+function explainHtml(info) {
+  const side = info.side ? `<span class="ex-chip">${esc(info.side)}</span>` : "";
+  const papers = info.papers ? `<span class="ex-chip">${esc(info.papers)}</span>` : "";
+  const aka = info.label && info.label !== info.title
+    ? `<p class="explain-aka">Atlas name: ${esc(info.label)}</p>`
+    : "";
+  const mod = info.moduleNote
+    ? `<p class="explain-mod"><b>${esc(info.moduleId || "")}.</b> ${esc(info.moduleNote)}</p>`
+    : "";
+  return `
+    <button class="explain-close" type="button" aria-label="Close explanation">✕</button>
+    <p class="explain-kicker">${esc(info.role)}</p>
+    <h3>${esc(info.title)}</h3>
+    <p class="explain-meta">${side}<span class="ex-chip">${esc(info.kind || "structure")}</span>${papers}</p>
+    <p class="explain-fn">${esc(info.fn)}</p>
+    <p class="explain-clinic"><b>Clinic.</b> ${esc(info.clinic)}</p>
+    ${mod}${aka}`;
+}
+
+function showExplain(name, mesh) {
+  const info = explainPart(name, mesh, current);
+  const html = explainHtml(info);
+  [els.pickLabel, document.getElementById("partExplain")].forEach((el) => {
+    if (!el) return;
+    el.innerHTML = html;
+    el.hidden = false;
+    el.classList.add("open");
+    el.style.display = "block";
+    const close = el.querySelector(".explain-close");
+    if (close) close.onclick = (e) => { e.stopPropagation(); hideExplain(); };
+  });
+}
+
+function hideExplain() {
+  [els.pickLabel, document.getElementById("partExplain")].forEach((el) => {
+    if (!el) return;
+    el.hidden = true;
+    el.classList.remove("open");
+    el.style.display = "none";
+    el.innerHTML = "";
+  });
+}
+
 function setLoader(on, pct, text) {
   if (!els.loader) return;
   els.loader.style.display = on ? "flex" : "none";
@@ -88,7 +136,9 @@ function renderParts() {
   });
   const host = document.getElementById("worldLabels");
   if (host) {
-    host.innerHTML = unique.map((name) => `<button class="wlab" data-part="${name}">${name}</button>`).join("");
+    host.innerHTML = unique.map((name) =>
+      `<button class="wlab" type="button" data-part="${name}" title="Tap for a teaching note">${name}</button>`
+    ).join("");
     host.querySelectorAll("[data-part]").forEach((btn) => {
       btn.onclick = () => isolateByName(btn.dataset.part);
     });
@@ -174,24 +224,22 @@ function isolateByName(name) {
       if (on && m.material.emissive) m.material.emissive.setHex(appearance === "atlas" ? 0x3d2611 : 0x3a2414);
     }
   });
-  if (els.pickLabel) {
-    els.pickLabel.style.display = "block";
-    els.pickLabel.textContent = name;
-  }
+  showExplain(name, selected);
   renderParts();
-  toast(name);
 }
 
 function resetIsolation() {
   selected = null;
   clearHighlight();
   applyLayers();
+  hideExplain();
   if (els.pickLabel) els.pickLabel.style.display = "none";
   renderParts();
 }
 
 async function select(id) {
   closeDrawers();
+  hideExplain();
   current = data.modules.find((m) => m.id === id) || data.modules[0];
   els.home.style.display = "none";
   els.title.textContent = current.id + " · " + current.title;
@@ -219,6 +267,7 @@ async function select(id) {
     }
     applyLayers();
     selected = null;
+    hideExplain();
     if (els.pickLabel) els.pickLabel.style.display = "none";
     renderParts();
     fitCamera();
@@ -603,12 +652,16 @@ function bindDrawers() {
   if (dockHome) {
     dockHome.onclick = () => {
       closeDrawers();
+      hideExplain();
       els.home.style.display = "block";
     };
   }
   if (mask) mask.onclick = closeDrawers;
   document.addEventListener("keydown", (e) => {
-    if (e.key === "Escape") closeDrawers();
+    if (e.key === "Escape") {
+      closeDrawers();
+      hideExplain();
+    }
   });
   window.matchMedia("(min-width: 1041px)").addEventListener("change", (e) => {
     if (e.matches) closeDrawers();
@@ -638,6 +691,7 @@ function bind() {
   document.getElementById("openStudio").onclick = () => select("M06");
   document.getElementById("btnHome").onclick = () => {
     closeDrawers();
+    hideExplain();
     els.home.style.display = "block";
   };
   document.getElementById("btnReset").onclick = () => { resetIsolation(); select(current.id); };
