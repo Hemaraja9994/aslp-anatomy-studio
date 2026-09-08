@@ -187,6 +187,7 @@ function resetIsolation() {
 }
 
 async function select(id) {
+  closeDrawers();
   current = data.modules.find((m) => m.id === id) || data.modules[0];
   els.home.style.display = "none";
   els.title.textContent = current.id + " · " + current.title;
@@ -510,13 +511,75 @@ function initThree() {
   });
 }
 
+function bindDrawers() {
+  const mask = document.getElementById("drawerMask");
+  const modulesBtn = document.getElementById("btnModules");
+  const learnBtn = document.getElementById("btnLearn");
+  const dockHome = document.getElementById("btnDockHome");
+  function closeDrawers() {
+    document.body.classList.remove("drawer-rail", "drawer-side");
+    if (mask) mask.hidden = true;
+    if (modulesBtn) modulesBtn.setAttribute("aria-expanded", "false");
+    if (learnBtn) learnBtn.setAttribute("aria-expanded", "false");
+  }
+  function setDrawer(which) {
+    const already = document.body.classList.contains("drawer-" + which);
+    closeDrawers();
+    if (already) return;
+    document.body.classList.add("drawer-" + which);
+    if (mask) mask.hidden = false;
+    if (which === "rail" && modulesBtn) modulesBtn.setAttribute("aria-expanded", "true");
+    if (which === "side" && learnBtn) learnBtn.setAttribute("aria-expanded", "true");
+  }
+  window.closeDrawers = closeDrawers;
+  if (modulesBtn) modulesBtn.onclick = () => setDrawer("rail");
+  if (learnBtn) learnBtn.onclick = () => setDrawer("side");
+  if (dockHome) {
+    dockHome.onclick = () => {
+      closeDrawers();
+      els.home.style.display = "block";
+    };
+  }
+  if (mask) mask.onclick = closeDrawers;
+  document.addEventListener("keydown", (e) => {
+    if (e.key === "Escape") closeDrawers();
+  });
+  window.matchMedia("(min-width: 1101px)").addEventListener("change", (e) => {
+    if (e.matches) closeDrawers();
+  });
+}
+
+function closeDrawers() {
+  if (typeof window.closeDrawers === "function" && window.closeDrawers !== closeDrawers) {
+    window.closeDrawers();
+    return;
+  }
+  document.body.classList.remove("drawer-rail", "drawer-side");
+  const mask = document.getElementById("drawerMask");
+  if (mask) mask.hidden = true;
+}
+
+function exportLogbook() {
+  const blob = new Blob([JSON.stringify(collectLogbook(), null, 2)], { type: "application/json" });
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(blob);
+  a.download = "aslp-anatomy-logbook.json";
+  a.click();
+  toast("Logbook exported.");
+}
+
 function bind() {
   document.getElementById("openStudio").onclick = () => select("M06");
-  document.getElementById("btnHome").onclick = () => { els.home.style.display = "block"; };
+  document.getElementById("btnHome").onclick = () => {
+    closeDrawers();
+    els.home.style.display = "block";
+  };
   document.getElementById("btnReset").onclick = () => { resetIsolation(); select(current.id); };
   document.getElementById("btnPlay").onclick = () => {
     playing = !playing;
-    document.getElementById("btnPlay").textContent = playing ? "Pause physiology" : "Play physiology";
+    document.getElementById("btnPlay").innerHTML = playing
+      ? `Pause<span class="btn-rest"> physiology</span>`
+      : `Play<span class="btn-rest"> physiology</span>`;
     toast(playing ? "Physiology animation on." : "Animation paused.");
   };
   document.getElementById("btnClinic").onclick = () => {
@@ -526,7 +589,9 @@ function bind() {
   };
   document.getElementById("btnSide").onclick = () => {
     side = side === "r" ? "l" : "r";
-    document.getElementById("btnSide").textContent = side === "r" ? "Right side" : "Left side";
+    document.getElementById("btnSide").innerHTML = side === "r"
+      ? `Right<span class="btn-rest"> side</span>`
+      : `Left<span class="btn-rest"> side</span>`;
     if (els.home.style.display === "none") select(current.id);
   };
   const lookBtn = document.getElementById("btnLook");
@@ -542,14 +607,9 @@ function bind() {
       }
     };
   }
-  document.getElementById("btnExport").onclick = () => {
-    const blob = new Blob([JSON.stringify(collectLogbook(), null, 2)], { type: "application/json" });
-    const a = document.createElement("a");
-    a.href = URL.createObjectURL(blob);
-    a.download = "aslp-anatomy-logbook.json";
-    a.click();
-    toast("Logbook exported.");
-  };
+  document.querySelectorAll("[data-export], #btnExport").forEach((btn) => {
+    btn.onclick = exportLogbook;
+  });
   els.search.oninput = () => renderList(els.search.value);
   document.querySelectorAll(".layer").forEach((btn) => {
     btn.onclick = () => {
@@ -562,7 +622,14 @@ function bind() {
   document.querySelectorAll(".tabs .btn").forEach((b) => {
     b.onclick = () => showTab(b.dataset.tab);
   });
-  els.lite.onchange = () => toast("Reload after changing Lite mode.");
+  const liteSheet = document.getElementById("liteModeSheet");
+  const syncLite = (checked) => {
+    if (els.lite) els.lite.checked = checked;
+    if (liteSheet) liteSheet.checked = checked;
+    toast("Reload after changing Lite mode.");
+  };
+  if (els.lite) els.lite.onchange = () => syncLite(els.lite.checked);
+  if (liteSheet) liteSheet.onchange = () => syncLite(liteSheet.checked);
   document.getElementById("homeGrid").innerHTML = data.modules.map((m) =>
     `<button class="tile" data-id="${m.id}"><b>${m.id}</b>${m.title}<span>${m.papers}</span></button>`
   ).join("");
@@ -570,6 +637,7 @@ function bind() {
     const t = e.target.closest("[data-id]");
     if (t) select(t.dataset.id);
   };
+  bindDrawers();
 }
 
 renderList("");

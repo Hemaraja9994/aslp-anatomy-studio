@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
   <title>ASLP Anatomy Studio</title>
   <meta name="author" content="Hemaraja Nayaka. S" />
   <meta name="description" content="Concept and designed by Hemaraja Nayaka. S. 3D anatomy studio for B.ASLP and MASLP (RCI 2024-25)." />
@@ -37,7 +37,7 @@
       </div>
     </header>
     <div class="layout">
-      <aside class="rail">
+      <aside class="rail" id="rail" aria-label="Curriculum modules">
         <h2>Modules</h2>
         <input class="search" id="search" placeholder="Search module, paper, topic" />
         <div id="moduleList"></div>
@@ -45,10 +45,10 @@
       <section class="stage">
         <canvas id="view"></canvas>
         <div class="toolbar">
-          <button class="btn" id="btnReset">Reset scene</button>
-          <button class="btn primary" id="btnPlay">Play physiology</button>
-          <button class="btn" id="btnClinic">Clinic overlay</button>
-          <button class="btn" id="btnSide">Right side</button>
+          <button class="btn" id="btnReset">Reset<span class="btn-rest"> scene</span></button>
+          <button class="btn primary" id="btnPlay">Play<span class="btn-rest"> physiology</span></button>
+          <button class="btn" id="btnClinic">Clinic<span class="btn-rest"> overlay</span></button>
+          <button class="btn" id="btnSide">Right<span class="btn-rest"> side</span></button>
           <button class="btn primary" id="btnLook">Photoreal</button>
         </div>
         <div class="pick-label" id="pickLabel"></div>
@@ -77,7 +77,11 @@
           </div>
         </div>
       </section>
-      <aside class="side">
+      <aside class="side" id="sidePanel" aria-label="Layers and learning">
+        <div class="sheet-tools">
+          <button class="btn" type="button" data-export>Export logbook</button>
+          <label class="btn ghost"><input type="checkbox" id="liteModeSheet" /> Lite mode</label>
+        </div>
         <h2>Layers</h2>
         <div class="layers">
           <button class="layer on" data-layer="surface">Surface</button>
@@ -110,6 +114,12 @@
         </div>
       </aside>
     </div>
+    <div class="drawer-mask" id="drawerMask" hidden></div>
+    <nav class="mobile-dock" id="mobileDock" aria-label="Studio navigation">
+      <button class="btn" id="btnModules" type="button" aria-controls="rail" aria-expanded="false">Modules</button>
+      <button class="btn" id="btnDockHome" type="button">Home</button>
+      <button class="btn" id="btnLearn" type="button" aria-controls="sidePanel" aria-expanded="false">Learn</button>
+    </nav>
   </div>
   <div class="toast" id="toast"></div>
   <script src="./js/data.js"></script>

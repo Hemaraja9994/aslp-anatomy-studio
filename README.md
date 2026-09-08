@@ -27,6 +27,8 @@ This is not Elsevier Complete Anatomy, not cadaver photogrammetry, not a surgica
 4. Use **Right side / Left side** for paired organs.
 5. Workbook / OSCE / Exam panels sit on the right.
 
+On a phone or tablet the 3D stage stays full-screen. Use the bottom bar: **Modules**, **Home**, **Learn**. Type and spacing scale with the viewport; layer and part buttons are sized for touch.
+
 ## Source of the 3D meshes
 
 See [ATTRIBUTION.md](./ATTRIBUTION.md). Geometry is streamed from the Anatria3D / Z-Anatomy packaging of BodyParts3D. Tissue appearance and device overlays are original to this studio.
