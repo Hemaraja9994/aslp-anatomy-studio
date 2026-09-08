@@ -199,18 +199,8 @@ function syncLabels() {
   const canvas = renderer.domElement;
   const w = canvas.clientWidth || 1;
   const h = canvas.clientHeight || 1;
-  // Density controls only on stacked phone/tablet layout — desktop keeps full labels.
-  const narrow = window.matchMedia("(max-width: 1040px)").matches;
-  const phone = narrow && (w <= 520 || window.matchMedia("(max-width: 600px)").matches);
-  const maxShow = phone ? 5 : (narrow ? 8 : 64);
-  const marginX = phone ? 10 : (narrow ? 8 : 4);
-  const topSafe = phone ? 52 : (narrow ? 44 : 0);
-  const bottomSafe = phone ? Math.min(150, h * 0.24) : (narrow ? Math.min(120, h * 0.18) : 0);
-  const minGapX = phone ? 56 : (narrow ? 72 : 0);
-  const minGapY = phone ? 22 : (narrow ? 26 : 0);
   const tmp = new THREE.Vector3();
   const placed = [];
-  const candidates = [];
   host.querySelectorAll("[data-part]").forEach((btn) => {
     const name = readPartName(btn);
     const mesh = (root.userData.named || []).find((m) => m.userData.label === name && m.visible);
@@ -229,58 +219,20 @@ function syncLabels() {
       btn.style.display = "none";
       return;
     }
-    const x = (tmp.x * 0.5 + 0.5) * w;
-    const y = (-tmp.y * 0.5 + 0.5) * h;
-    const isSelected = !!(selected && selected.userData.label === name);
-    candidates.push({ btn, name, x, y, isSelected, z: tmp.z });
-  });
-  candidates.sort((a, b) => {
-    if (a.isSelected !== b.isSelected) return a.isSelected ? -1 : 1;
-    return a.z - b.z;
-  });
-  let shown = 0;
-  candidates.forEach((c, idx) => {
-    const { btn, x, y, isSelected } = c;
-    btn.classList.toggle("on", isSelected);
-    // Stagger alternate labels slightly on dense mobile views.
-    let sx = x;
-    let sy = y;
-    if (narrow && !isSelected) {
-      const bump = (idx % 2 === 0 ? -1 : 1) * (phone ? 10 : 14);
-      sx += bump;
-      sy += (idx % 3 - 1) * (phone ? 8 : 10);
+    let x = (tmp.x * 0.5 + 0.5) * w;
+    let y = (-tmp.y * 0.5 + 0.5) * h;
+    x = Math.min(w - 16, Math.max(16, x));
+    y = Math.min(h - 16, Math.max(22, y));
+    for (let k = 0; k < 10; k++) {
+      const clash = placed.some((p) => Math.abs(p.x - x) < 86 && Math.abs(p.y - y) < 20);
+      if (!clash) break;
+      y = y > 36 ? y - 20 : y + 20;
     }
-    // On desktop, clamp into the canvas like main's teaching-note path.
-    if (!narrow) {
-      sx = Math.min(w - 16, Math.max(16, sx));
-      sy = Math.min(h - 16, Math.max(22, sy));
-      for (let k = 0; k < 10; k++) {
-        const clash = placed.some((p) => Math.abs(p.x - sx) < 86 && Math.abs(p.y - sy) < 20);
-        if (!clash) break;
-        sy = sy > 36 ? sy - 20 : sy + 20;
-      }
-    }
-    const outOfSafe = sx < marginX || sx > w - marginX || sy < topSafe || sy > h - bottomSafe;
-    let collides = false;
-    if (narrow && !isSelected) {
-      for (let i = 0; i < placed.length; i++) {
-        const p = placed[i];
-        if (Math.abs(p.x - sx) < minGapX && Math.abs(p.y - sy) < minGapY) {
-          collides = true;
-          break;
-        }
-      }
-    }
-    const keep = isSelected || (!outOfSafe && !collides && shown < maxShow);
-    if (!keep) {
-      btn.style.display = "none";
-      return;
-    }
+    placed.push({ x, y });
     btn.style.display = "block";
-    btn.style.left = sx + "px";
-    btn.style.top = sy + "px";
-    placed.push({ x: sx, y: sy });
-    shown += 1;
+    btn.style.left = x + "px";
+    btn.style.top = y + "px";
+    btn.classList.toggle("on", !!(selected && selected.userData.label === readPartName(btn)));
   });
 }
 
@@ -417,30 +369,10 @@ function fitCamera() {
   const size = sizeVec.length();
   const radius = Math.max(size * 0.5, 0.2);
   const center = box.getCenter(new THREE.Vector3());
-  // PerspectiveCamera.fov is vertical; on narrow/tall canvases the horizontal
-  // FOV is smaller, so distance must be driven by max(fitV, fitH).
-  const aspect = Math.max(0.05, camera.aspect || 1);
-  const vHalf = THREE.MathUtils.degToRad(camera.fov * 0.5);
-  const hHalf = Math.atan(Math.tan(vHalf) * aspect);
-  const fitV = radius / Math.tan(vHalf);
-  const fitH = radius / Math.tan(hHalf);
-  let fit = Math.max(fitV, fitH);
-  // Leave room for in-stage chrome (toolbar + caption) on phone/tablet stages.
-  let pad = 1.22;
-  const stage = document.querySelector(".stage");
-  if (stage) {
-    const sw = stage.clientWidth || 0;
-    const sh = stage.clientHeight || 0;
-    if (sw > 0 && sh > 0 && (sw <= 1040 || aspect < 0.9)) {
-      const topFrac = 56 / sh;
-      const bottomFrac = Math.min(0.28, Math.max(0.14, 120 / sh));
-      const usable = Math.max(0.48, 1 - topFrac - bottomFrac);
-      pad = Math.max(pad, (1 / usable) * 0.98);
-    }
-  }
+  const fit = radius / Math.tan(THREE.MathUtils.degToRad(camera.fov * 0.5));
   controls.minDistance = Math.max(0.05, radius * 0.06);
-  controls.maxDistance = Math.max(fit * pad * 4, radius * 8, 10);
-  camera.position.copy(center).add(new THREE.Vector3(0.42, 0.18, 0.78).normalize().multiplyScalar(fit * pad));
+  controls.maxDistance = Math.max(fit * 4, radius * 8, 10);
+  camera.position.copy(center).add(new THREE.Vector3(0.42, 0.18, 0.78).normalize().multiplyScalar(fit * 1.2));
   controls.target.copy(center);
   syncLens();
   controls.update();
@@ -563,7 +495,6 @@ function showTab(name) {
       </div>
       <div class="panel-block">
         <h3>Source</h3>
-        <p>Concept and designed by Hemaraja Nayaka. S.</p>
         <p>Dissection meshes from BodyParts3D / Z-Anatomy (CC BY-SA). Photoreal look is original tissue shading on those reconstructions — not cadaver photographs and not Elsevier Complete Anatomy. Educational use only. Not for surgical navigation.</p>
       </div>`
   };
@@ -709,7 +640,6 @@ function initThree() {
   });
 
   clock = new THREE.Clock();
-  let fitResizeTimer = 0;
   function resize() {
     const stage = document.querySelector(".stage");
     const w = Math.max(1, stage.clientWidth || 800);
@@ -717,11 +647,6 @@ function initThree() {
     camera.aspect = w / h;
     camera.updateProjectionMatrix();
     renderer.setSize(w, h, false);
-    // Re-fit after layout settles (mobile stack, dock, orientation).
-    if (root && root.userData && root.userData.named && root.userData.named.length) {
-      clearTimeout(fitResizeTimer);
-      fitResizeTimer = setTimeout(() => fitCamera(), 90);
-    }
   }
   window.addEventListener("resize", resize);
   if (window.ResizeObserver) {
