@@ -1,8 +1,8 @@
 window.STUDIO_DATA = {
   product: {
     name: "ASLP Anatomy Studio",
-    version: "1.2.0",
-    note: "Photoreal tissue shading on reconstructed dissection meshes. Not a surgical navigator."
+    version: "1.3.0",
+    note: "Complete RCI studio: photoreal dissection meshes, physiology and clinic overlays. Not a surgical navigator."
   },
   modules: [
     {
@@ -75,7 +75,7 @@ window.STUDIO_DATA = {
     {
       id: "M02",
       title: "Respiratory system for speech",
-      scene: "larynx",
+      scene: "chest",
       first: "Semester 1",
       papers: "B1.3, B5.1, B5.2, B6.2",
       tags: ["Speech breathing"],

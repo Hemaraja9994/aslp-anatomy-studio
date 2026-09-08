@@ -145,7 +145,7 @@ export const StudioAtlas = {
     const wanted = new Map();
     organs.forEach((o) => {
       const lat = lateralityOf(o.name + " " + o.node + " " + o.id);
-      if (lat !== "m" && lat !== side) return;
+      if (sceneName !== "chest" && lat !== "m" && lat !== side) return;
       wanted.set(norm(o.node), o);
       wanted.set(norm(o.name), o);
     });

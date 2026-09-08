@@ -295,6 +295,31 @@ button { cursor: pointer; }
   z-index: 2;
 }
 
+.world-labels {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: 2;
+  overflow: hidden;
+}
+.wlab {
+  position: absolute;
+  transform: translate(-50%, -120%);
+  pointer-events: auto;
+  font-family: "IBM Plex Sans", sans-serif;
+  font-size: 10px;
+  padding: 2px 6px;
+  border-radius: 999px;
+  border: 1px solid rgba(61, 184, 176, 0.45);
+  background: rgba(8, 14, 26, 0.78);
+  color: #e8eef8;
+  white-space: nowrap;
+  max-width: 180px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.wlab.on { background: #1a4a48; border-color: #3db8b0; }
+
 @media (max-width: 1100px) {
   .layout { grid-template-columns: 1fr; }
   .rail, .side { max-height: 280px; }

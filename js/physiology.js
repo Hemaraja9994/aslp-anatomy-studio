@@ -22,6 +22,10 @@ function addPulse(root, meshes, axis, amount, speed) {
 }
 
 export function attachPhysiology(sceneName, root) {
+  if (sceneName === "chest") {
+    const dia = findNamed(root, "^diaphragm");
+    addPulse(root, dia, "y", 0.06, 2.2);
+  }
   if (sceneName === "ear") {
     const tm = findNamed(root, "tympanic membrane");
     addPulse(root, tm, "z", 0.04, 6);

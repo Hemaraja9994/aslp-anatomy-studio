@@ -3,6 +3,7 @@ import { OrbitControls } from "three/addons/controls/OrbitControls.js";
 import { RoomEnvironment } from "three/addons/environments/RoomEnvironment.js";
 import { StudioAtlas } from "./atlas.js";
 import { attachPhysiology } from "./physiology.js";
+import { attachClinic } from "./clinic.js";
 import { Tissue } from "./tissue.js";
 
 window.THREE = THREE;
@@ -37,6 +38,7 @@ let side = "r";
 let loadToken = 0;
 let appearance = "photoreal";
 let labTable, labGrid;
+const cutPlane = new THREE.Plane(new THREE.Vector3(-1, 0, 0), 0.02);
 
 function toast(msg) {
   els.toast.textContent = msg;
@@ -70,6 +72,8 @@ function renderParts() {
   const meshes = (root && root.userData.named) || [];
   if (!meshes.length) {
     els.parts.innerHTML = "<p class='muted'>Open a module to list dissection parts.</p>";
+    const host = document.getElementById("worldLabels");
+    if (host) host.innerHTML = "";
     return;
   }
   const unique = [...new Set(meshes.map((m) => m.userData.label).filter(Boolean))].sort();
@@ -79,6 +83,13 @@ function renderParts() {
   els.parts.querySelectorAll("[data-part]").forEach((btn) => {
     btn.onclick = () => isolateByName(btn.dataset.part);
   });
+  const host = document.getElementById("worldLabels");
+  if (host) {
+    host.innerHTML = unique.map((name) => `<button class="wlab" data-part="${name}">${name}</button>`).join("");
+    host.querySelectorAll("[data-part]").forEach((btn) => {
+      btn.onclick = () => isolateByName(btn.dataset.part);
+    });
+  }
 }
 
 function applyLayers() {
@@ -86,7 +97,47 @@ function applyLayers() {
   root.traverse((obj) => {
     const layer = obj.userData && obj.userData.layer;
     if (!layer) return;
+    if (layer === "labels" || layer === "cut") return;
     obj.visible = !!layersState[layer];
+  });
+  if (renderer) renderer.clippingPlanes = layersState.cut ? [cutPlane] : [];
+  const labelHost = document.getElementById("worldLabels");
+  if (labelHost) labelHost.style.display = layersState.labels ? "block" : "none";
+}
+
+function syncLabels() {
+  const host = document.getElementById("worldLabels");
+  if (!host || !renderer || !root || !camera) return;
+  if (!layersState.labels || (els.home && els.home.style.display !== "none")) {
+    host.style.display = "none";
+    return;
+  }
+  host.style.display = "block";
+  const canvas = renderer.domElement;
+  const w = canvas.clientWidth || 1;
+  const h = canvas.clientHeight || 1;
+  const tmp = new THREE.Vector3();
+  host.querySelectorAll("[data-part]").forEach((btn) => {
+    const mesh = (root.userData.named || []).find((m) => m.userData.label === btn.dataset.part && m.visible);
+    if (!mesh) {
+      btn.style.display = "none";
+      return;
+    }
+    mesh.updateWorldMatrix(true, false);
+    const box = new THREE.Box3().setFromObject(mesh);
+    if (box.isEmpty()) {
+      btn.style.display = "none";
+      return;
+    }
+    box.getCenter(tmp).project(camera);
+    if (tmp.z > 1) {
+      btn.style.display = "none";
+      return;
+    }
+    btn.style.display = "block";
+    btn.style.left = ((tmp.x * 0.5 + 0.5) * w) + "px";
+    btn.style.top = ((-tmp.y * 0.5 + 0.5) * h) + "px";
+    btn.classList.toggle("on", !!(selected && selected.userData.label === btn.dataset.part));
   });
 }
 
@@ -106,6 +157,10 @@ function isolateByName(name) {
   const meshes = (root.userData.named || []).filter((m) => m.userData.label === name);
   if (!meshes.length) return;
   selected = meshes[0];
+  if (selected.userData.layer === "clinic") {
+    layersState.clinic = true;
+    document.querySelector('[data-layer="clinic"]')?.classList.add("on");
+  }
   clearHighlight();
   (root.userData.named || []).forEach((m) => {
     const on = m.userData.label === name;
@@ -152,6 +207,11 @@ async function select(id) {
     });
     if (token !== loadToken) return;
     attachPhysiology(current.scene, root);
+    attachClinic(current.scene, root, current.id);
+    if (current.id === "M14" || current.id === "M16") {
+      layersState.clinic = true;
+      document.querySelector('[data-layer="clinic"]')?.classList.add("on");
+    }
     applyLayers();
     selected = null;
     if (els.pickLabel) els.pickLabel.style.display = "none";
@@ -366,6 +426,8 @@ function initThree() {
   renderer.toneMappingExposure = 1.22;
   renderer.shadowMap.enabled = !els.lite.checked;
   renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+  renderer.localClippingEnabled = true;
+  renderer.clippingPlanes = [];
 
   const pmrem = new THREE.PMREMGenerator(renderer);
   scene.environment = pmrem.fromScene(new RoomEnvironment(), 0.04).texture;
@@ -442,6 +504,7 @@ function initThree() {
     const t = clock.getElapsedTime();
     controls.update();
     if (playing && root.userData.animate) root.userData.animate(t);
+    syncLabels();
     renderer.render(scene, camera);
   });
 }
