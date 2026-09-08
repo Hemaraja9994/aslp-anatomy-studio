@@ -1,8 +1,8 @@
 window.STUDIO_DATA = {
   product: {
     name: "ASLP Anatomy Studio",
-    version: "1.0.0",
-    note: "Educational schematic 3D. Not a surgical navigator."
+    version: "1.2.0",
+    note: "Photoreal tissue shading on reconstructed dissection meshes. Not a surgical navigator."
   },
   modules: [
     {

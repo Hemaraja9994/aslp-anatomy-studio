@@ -1,6 +1,7 @@
 import * as THREE from "three";
 import { GLTFLoader } from "three/addons/loaders/GLTFLoader.js";
 import { DRACOLoader } from "three/addons/loaders/DRACOLoader.js";
+import { Tissue } from "./tissue.js";
 
 const cache = new Map();
 let loader;
@@ -16,16 +17,7 @@ function getLoader() {
 }
 
 function layerFor(o) {
-  const n = String(o.name_en || o.name || "").toLowerCase();
-  const sys = o.system;
-  if (n.includes("tympanic membrane") || n.includes("quadrangular")) return "membrane";
-  if (n.includes("cartilage") || /hyoid|incus|malleus|stapes/.test(n)) return "bone";
-  if (sys === "skeletal") return "bone";
-  if (sys === "muscular") return "muscle";
-  if (sys === "nervous") return "nerve";
-  if (sys === "cardiovascular") return "vessel";
-  if (sys === "articular") return "membrane";
-  return "surface";
+  return Tissue.layerOf(Tissue.kindFor(o));
 }
 
 async function loadOrgans() {
@@ -69,6 +61,7 @@ async function loadOrgans() {
       node: o.node,
       file: o.mesh_file,
       system: o.system,
+      kind: Tissue.kindFor(o),
       layer: layerFor(o),
       scenes: tags
     });
@@ -114,30 +107,18 @@ function lateralityOf(name) {
   return "m";
 }
 
-const PALETTE = {
-  bone: { color: 0xe8d7b4, roughness: 0.52, metalness: 0.04, clearcoat: 0.1 },
-  muscle: { color: 0x8c3a3c, roughness: 0.48, metalness: 0.0, clearcoat: 0.22 },
-  nerve: { color: 0xe8d56a, roughness: 0.32, metalness: 0.04, clearcoat: 0.28 },
-  vessel: { color: 0x9e2e36, roughness: 0.28, metalness: 0.08, clearcoat: 0.4 },
-  membrane: { color: 0xd7c4b0, roughness: 0.22, metalness: 0.0, opacity: 0.78, transparent: true, clearcoat: 0.45 },
-  surface: { color: 0xddb49c, roughness: 0.44, metalness: 0.0, clearcoat: 0.16 }
-};
-
-function paint(mesh, layer) {
-  const p = PALETTE[layer] || PALETTE.surface;
-  mesh.material = new THREE.MeshPhysicalMaterial({
-    color: p.color,
-    roughness: p.roughness,
-    metalness: p.metalness || 0,
-    clearcoat: p.clearcoat || 0,
-    clearcoatRoughness: 0.45,
-    sheen: 0.18,
-    sheenRoughness: 0.55,
-    sheenColor: new THREE.Color(p.color),
-    transparent: !!p.transparent,
-    opacity: p.opacity ?? 1,
-    side: THREE.DoubleSide
+function namedBox(meshes) {
+  const box = new THREE.Box3();
+  const tmp = new THREE.Box3();
+  meshes.forEach((mesh) => {
+    if (!mesh || !mesh.visible || !mesh.geometry) return;
+    mesh.updateWorldMatrix(true, false);
+    mesh.geometry.computeBoundingBox();
+    if (!mesh.geometry.boundingBox) return;
+    tmp.copy(mesh.geometry.boundingBox).applyMatrix4(mesh.matrixWorld);
+    box.union(tmp);
   });
+  return box;
 }
 
 function matchOrgan(obj, wanted) {
@@ -157,6 +138,7 @@ function matchOrgan(obj, wanted) {
 export const StudioAtlas = {
   lateralityOf,
   async build(sceneName, root, opts = {}) {
+    await Tissue.preload();
     const organs = (await loadOrgans()).filter((o) => o.scenes.includes(sceneName));
     const files = [...new Set(organs.map((o) => o.file))];
     const side = opts.side || "r";
@@ -194,28 +176,30 @@ export const StudioAtlas = {
         }
         obj.visible = true;
         obj.userData.pickable = true;
-        obj.userData.layer = rec.layer;
+        obj.userData.kind = rec.kind || Tissue.kindFor(rec);
+        obj.userData.layer = rec.layer || Tissue.layerOf(obj.userData.kind);
         obj.userData.organ = rec;
         obj.userData.label = rec.name;
-        paint(obj, rec.layer);
+        Tissue.paint(obj, obj.userData.kind, {
+          appearance: opts.appearance || "photoreal",
+          lite: !!opts.lite
+        });
         root.userData.named.push(obj);
       });
       holder.add(cloned);
     }
 
-    const box = new THREE.Box3();
-    holder.updateWorldMatrix(true, true);
-    holder.traverse((o) => {
-      if (o.isMesh && o.visible) box.expandByObject(o);
-    });
+    const box = namedBox(root.userData.named);
     if (!box.isEmpty()) {
       const size = new THREE.Vector3();
       const center = new THREE.Vector3();
       box.getSize(size);
       box.getCenter(center);
-      holder.position.sub(center);
       const maxDim = Math.max(size.x, size.y, size.z) || 1;
-      holder.scale.setScalar(3.4 / maxDim);
+      const s = 3.4 / maxDim;
+      holder.scale.setScalar(s);
+      holder.position.copy(center).multiplyScalar(-s);
+      holder.updateWorldMatrix(true, true);
     }
     if (opts.onProgress) opts.onProgress(1, "ready");
     return { files, visible: root.userData.named.length };
