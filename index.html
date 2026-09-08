@@ -49,7 +49,7 @@
         <div class="home" id="home">
           <div class="hero">
             <h2>A studio for speech, language, swallowing, hearing and balance.</h2>
-            <p>Built for B.ASLP (RCI 2024-25) and postgraduate programmes. Scenes are educational schematics, not surgical maps.</p>
+            <p>Built for B.ASLP (RCI 2024-25) and postgraduate audiology / SLP programmes. Scenes are educational schematics for teaching and viva preparation. They are not surgical maps.</p>
             <p><button class="btn primary" id="openStudio">Enter temporal bone studio</button></p>
             <div class="grid" id="homeGrid"></div>
           </div>
@@ -78,7 +78,7 @@
         <div id="sideContent">
           <div class="panel-block">
             <h3>Faculty note</h3>
-            <p>Choose a module to load outcomes, worksheets and OSCE stations with the 3D scene.</p>
+            <p>Use this panel after choosing a module. Undergraduate and postgraduate outcomes, worksheets and OSCE stations load with the scene.</p>
           </div>
         </div>
       </aside>
@@ -86,6 +86,11 @@
   </div>
   <div class="toast" id="toast"></div>
   <script src="https://unpkg.com/three@0.160.0/build/three.min.js"></script>
+  <script>
+    if (typeof THREE === "undefined") {
+      document.write('<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/0.160.0/three.min.js"><\/script>');
+    }
+  </script>
   <script src="./js/data.js"></script>
   <script src="./js/scenes.js"></script>
   <script src="./js/studio.js"></script>
