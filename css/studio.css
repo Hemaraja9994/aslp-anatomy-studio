@@ -741,6 +741,14 @@ body.rail-off .rail, body.side-off .side { padding: 0; border: 0; overflow: hidd
   .btn-rest { display: none; }
   .stage-caption { left: 8px; right: 8px; bottom: 8px; }
   .stage-caption h3 { font-size: 17px; }
+  /* Compact caption so the mesh has more usable vertical framing. */
+  .stage-caption p, .stage-caption .tags { display: none; }
+  .stage-caption .card { padding: 10px 12px 12px; max-width: none; }
+  .wlab {
+    font-size: 9.5px;
+    padding: 2px 6px;
+    max-width: min(150px, 46vw);
+  }
   .explain {
     top: auto;
     bottom: 8px;
@@ -752,6 +760,13 @@ body.rail-off .rail, body.side-off .side { padding: 0; border: 0; overflow: hidd
   .stage:has(.explain.open) .stage-caption { display: none; }
   .tweaks { bottom: calc(68px + env(safe-area-inset-bottom)); right: 12px; width: min(292px, calc(100vw - 24px)); }
   .toast { left: 12px; right: 12px; bottom: calc(68px + env(safe-area-inset-bottom)); max-width: none; }
+}
+
+/* Phones: tighten caption further; stage already fills layout between topbar + dock. */
+@media (max-width: 600px) {
+  .stage-caption h2 { display: none; }
+  .stage-caption h3 { font-size: 15px; }
+  .stage-caption .card { padding: 8px 11px; }
 }
 
 /* Tablet: wider sheets, keep the 3D stage */
