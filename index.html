@@ -8,6 +8,14 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600&family=Source+Serif+4:opsz,wght@8..60,500;8..60,700&display=swap" rel="stylesheet" />
   <link rel="stylesheet" href="./css/studio.css" />
+  <script type="importmap">
+  {
+    "imports": {
+      "three": "https://unpkg.com/three@0.160.0/build/three.module.js",
+      "three/addons/": "https://unpkg.com/three@0.160.0/examples/jsm/"
+    }
+  }
+  </script>
 </head>
 <body>
   <div class="app">
@@ -16,7 +24,7 @@
         <div class="logo">AS</div>
         <div>
           <h1>ASLP Anatomy Studio</h1>
-          <p>3D anatomy and physiology for audiology and speech-language pathology</p>
+          <p>Dissection-grade 3D for audiology and speech-language pathology</p>
         </div>
       </div>
       <div class="top-actions">
@@ -37,19 +45,27 @@
           <button class="btn" id="btnReset">Reset scene</button>
           <button class="btn primary" id="btnPlay">Play physiology</button>
           <button class="btn" id="btnClinic">Clinic overlay</button>
+          <button class="btn" id="btnSide">Right side</button>
         </div>
+        <div class="pick-label" id="pickLabel"></div>
         <div class="stage-caption">
           <div class="card">
             <h2>Active scene</h2>
             <h3 id="modTitle">Select a module</h3>
-            <p id="modSummary">Open a module from the left rail or start from the curriculum home.</p>
+            <p id="modSummary">Open a module from the left rail or start from the curriculum home. Click a mesh to isolate it.</p>
             <div class="tags" id="modTags"></div>
+          </div>
+        </div>
+        <div class="loader" id="loader">
+          <div>
+            <p id="loaderText">Loading dissection meshes…</p>
+            <div class="bar"><span id="loaderBar"></span></div>
           </div>
         </div>
         <div class="home" id="home">
           <div class="hero">
-            <h2>A studio for speech, language, swallowing, hearing and balance.</h2>
-            <p>Built for B.ASLP (RCI 2024-25) and postgraduate audiology / SLP programmes. Scenes are educational schematics for teaching and viva preparation. They are not surgical maps.</p>
+            <h2>Real dissection meshes for speech, hearing and swallowing.</h2>
+            <p>BodyParts3D / Z-Anatomy reconstructed anatomy (CC BY-SA) — temporal bone, ossicles, cochlea, pinna, larynx, tongue, pharynx, language cortex and cranial nerves. Built for B.ASLP (RCI 2024-25) and postgraduate programmes. Educational atlas, not a surgical navigator, and not affiliated with Elsevier.</p>
             <p><button class="btn primary" id="openStudio">Enter temporal bone studio</button></p>
             <div class="grid" id="homeGrid"></div>
           </div>
@@ -69,6 +85,10 @@
           <button class="layer on" data-layer="labels">Labels</button>
           <button class="layer on" data-layer="cut">Cut planes</button>
         </div>
+        <h2>Dissection parts</h2>
+        <div class="parts" id="partsList">
+          <p class="muted">Open a module to list reconstructed parts. Click a name or the 3D mesh to isolate it.</p>
+        </div>
         <div class="tabs">
           <button class="btn active" data-tab="learn">Learn</button>
           <button class="btn" data-tab="workbook">Workbook</button>
@@ -78,21 +98,16 @@
         <div id="sideContent">
           <div class="panel-block">
             <h3>Faculty note</h3>
-            <p>Use this panel after choosing a module. Undergraduate and postgraduate outcomes, worksheets and OSCE stations load with the scene.</p>
+            <p>Use this panel after choosing a module. Undergraduate and postgraduate outcomes, worksheets and OSCE stations load with the dissection scene.</p>
           </div>
         </div>
       </aside>
     </div>
   </div>
   <div class="toast" id="toast"></div>
-  <script src="https://unpkg.com/three@0.160.0/build/three.min.js"></script>
-  <script>
-    if (typeof THREE === "undefined") {
-      document.write('<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/0.160.0/three.min.js"><\/script>');
-    }
-  </script>
   <script src="./js/data.js"></script>
+  <script src="./js/catalog.js"></script>
   <script src="./js/scenes.js"></script>
-  <script src="./js/studio.js"></script>
+  <script type="module" src="./js/studio.js"></script>
 </body>
 </html>
