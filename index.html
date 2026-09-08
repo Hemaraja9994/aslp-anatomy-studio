@@ -3,12 +3,12 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-  <title>ASLP Anatomy Studio</title>
+  <title>Audiology &amp; Speech-Language Pathology — Anatomy Studio</title>
   <meta name="author" content="Hemaraja Nayaka. S" />
-  <meta name="description" content="Concept and designed by Hemaraja Nayaka. S. 3D anatomy studio for B.ASLP and MASLP (RCI 2024-25)." />
+  <meta name="description" content="Concept and designed by Hemaraja Nayaka. S. 3D anatomy studio for Audiology &amp; Speech-Language Pathology, B.ASLP and MASLP (RCI 2024-25)." />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600&family=Source+Serif+4:opsz,wght@8..60,500;8..60,700&display=swap" rel="stylesheet" />
+  <link href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;600&family=Spectral:wght@400;600&display=swap" rel="stylesheet" />
   <link rel="stylesheet" href="./css/studio.css" />
   <script type="importmap">
   {
@@ -25,31 +25,43 @@
       <div class="brand">
         <div class="logo">AS</div>
         <div>
-          <h1>ASLP Anatomy Studio</h1>
+          <h1>Audiology &amp; Speech-Language Pathology — Anatomy Studio<span class="short">ASLP</span></h1>
           <p>Dissection-grade 3D for audiology and speech-language pathology</p>
-          <p class="credit">Concept and designed by Hemaraja Nayaka. S</p>
         </div>
       </div>
       <div class="top-actions">
+        <div class="mode-switch">
+          <button class="btn active" id="btnStudent">Student</button>
+          <button class="btn" id="btnFaculty">Faculty</button>
+        </div>
+        <button class="btn ghost" id="btnSheets">Print sheets</button>
+        <button class="btn ghost" id="btnTweaks">Tweaks</button>
         <button class="btn ghost" id="btnHome">Curriculum home</button>
         <button class="btn" id="btnExport">Export logbook</button>
         <label class="btn ghost"><input type="checkbox" id="liteMode" /> Lite mode</label>
       </div>
     </header>
     <div class="layout">
-      <aside class="rail" id="rail" aria-label="Curriculum modules">
-        <h2>Modules</h2>
+      <aside class="rail">
+        <div class="panel-head">
+          <h2>Modules</h2>
+          <span class="count">17 · RCI 2024-25</span>
+        </div>
         <input class="search" id="search" placeholder="Search module, paper, topic" />
         <div id="moduleList"></div>
       </aside>
       <section class="stage">
         <canvas id="view"></canvas>
         <div class="toolbar">
-          <button class="btn" id="btnReset">Reset<span class="btn-rest"> scene</span></button>
-          <button class="btn primary" id="btnPlay">Play<span class="btn-rest"> physiology</span></button>
-          <button class="btn" id="btnClinic">Clinic<span class="btn-rest"> overlay</span></button>
-          <button class="btn" id="btnSide">Right<span class="btn-rest"> side</span></button>
+          <button class="btn" id="btnReset">Reset scene</button>
+          <button class="btn primary" id="btnPlay">Play physiology</button>
+          <button class="btn" id="btnClinic">Clinic overlay</button>
+          <button class="btn" id="btnSide">Right side</button>
           <button class="btn primary" id="btnLook">Photoreal</button>
+        </div>
+        <div class="stage-tools">
+          <button class="icon-btn" id="btnRailToggle" title="Hide module rail" aria-label="Hide module rail">◧</button>
+          <button class="icon-btn" id="btnSideToggle" title="Hide teaching panel" aria-label="Hide teaching panel">◨</button>
         </div>
         <div class="pick-label" id="pickLabel"></div>
         <div class="world-labels" id="worldLabels"></div>
@@ -69,20 +81,22 @@
         </div>
         <div class="home" id="home">
           <div class="hero">
+            <p class="eyebrow">Audiology &amp; Speech-Language Pathology — Anatomy Studio</p>
             <h2>Photoreal dissection meshes for speech, hearing and swallowing.</h2>
             <p class="byline">Concept and designed by Hemaraja Nayaka. S</p>
             <p>Wet muscle, bone, cartilage and mucosa shaders on BodyParts3D / Z-Anatomy reconstructions (CC BY-SA) — temporal bone, ossicles, cochlea, pinna, larynx, tongue, pharynx, language cortex and cranial nerves. Built for B.ASLP (RCI 2024-25) and postgraduate programmes. Educational atlas, not a surgical navigator, and not affiliated with Elsevier Complete Anatomy.</p>
-            <p><button class="btn primary" id="openStudio">Enter temporal bone studio</button></p>
+            <div class="cta">
+              <button class="btn primary" id="openStudio">Enter temporal bone studio</button>
+            </div>
+            <div class="panel-head" style="margin-top:30px"><h2>17 curriculum modules</h2><span class="count">M00 – M16</span></div>
             <div class="grid" id="homeGrid"></div>
           </div>
         </div>
       </section>
-      <aside class="side" id="sidePanel" aria-label="Layers and learning">
-        <div class="sheet-tools">
-          <button class="btn" type="button" data-export>Export logbook</button>
-          <label class="btn ghost"><input type="checkbox" id="liteModeSheet" /> Lite mode</label>
+      <aside class="side">
+        <div class="panel-head">
+          <h2>Layers</h2>
         </div>
-        <h2>Layers</h2>
         <div class="layers">
           <button class="layer on" data-layer="surface">Surface</button>
           <button class="layer on" data-layer="bone">Bone / cartilage</button>
@@ -95,7 +109,10 @@
           <button class="layer on" data-layer="labels">Labels</button>
           <button class="layer on" data-layer="cut">Cut planes</button>
         </div>
-        <h2>Dissection parts</h2>
+        <div class="panel-head">
+          <h2>Dissection parts</h2>
+          <span class="count">click to isolate</span>
+        </div>
         <div class="parts" id="partsList">
           <p class="muted">Open a module to list reconstructed parts. Click a name or the 3D mesh to isolate it.</p>
         </div>
@@ -114,17 +131,63 @@
         </div>
       </aside>
     </div>
-    <div class="drawer-mask" id="drawerMask" hidden></div>
-    <nav class="mobile-dock" id="mobileDock" aria-label="Studio navigation">
-      <button class="btn" id="btnModules" type="button" aria-controls="rail" aria-expanded="false">Modules</button>
-      <button class="btn" id="btnDockHome" type="button">Home</button>
-      <button class="btn" id="btnLearn" type="button" aria-controls="sidePanel" aria-expanded="false">Learn</button>
-    </nav>
+    <footer class="credentials">
+      <div class="cred-line">
+        <b>Hemaraja Nayaka S</b>
+        <span>Associate Professor, Dept. of Audiology &amp; Speech-Language Pathology</span>
+        <span>Yenepoya Medical College Hospital, Mangaluru</span>
+      </div>
+      <div class="cred-line">
+        <span>MSc (SLP), Dip. in HA &amp; ET (AIISH), PGDBEME</span>
+        <span>RCI A30294</span>
+        <span>0824-2204667, Ext 2229</span>
+        <a href="https://s.hemarajanayaka.workers.dev/" target="_blank" rel="noopener">Profiles and links</a>
+      </div>
+      <div class="cred-fine">Meshes: BodyParts3D / Z-Anatomy (CC BY-SA). Educational use only, not for surgical navigation.</div>
+    </footer>
   </div>
+  <aside class="tweaks" id="tweaks"></aside>
+  <div class="faculty" id="faculty"></div>
+  <div class="print-host" id="printSheet"></div>
   <div class="toast" id="toast"></div>
+  <script>
+    // Shell only: collapse the side rails so the 3D stage can go full width.
+    (function () {
+      const pairs = [
+        ["btnRailToggle", "rail-off", "module rail"],
+        ["btnSideToggle", "side-off", "teaching panel"]
+      ];
+      const student = document.getElementById("btnStudent");
+      const faculty = document.getElementById("btnFaculty");
+      if (student && faculty) {
+        student.onclick = () => {
+          document.getElementById("faculty").style.display = "none";
+          document.body.classList.remove("faculty-on");
+        };
+        const sync = () => {
+          const on = document.body.classList.contains("faculty-on");
+          faculty.classList.toggle("active", on);
+          student.classList.toggle("active", !on);
+        };
+        new MutationObserver(sync).observe(document.body, { attributes: true, attributeFilter: ["class"] });
+      }
+      pairs.forEach(([id, cls, name]) => {
+        const btn = document.getElementById(id);
+        if (!btn) return;
+        btn.onclick = () => {
+          const off = document.body.classList.toggle(cls);
+          btn.title = (off ? "Show " : "Hide ") + name;
+          window.dispatchEvent(new Event("resize"));
+          setTimeout(() => window.dispatchEvent(new Event("resize")), 240);
+        };
+      });
+    })();
+  </script>
   <script src="./js/data.js"></script>
   <script src="./js/catalog.js"></script>
   <script src="./js/scenes.js"></script>
   <script type="module" src="./js/studio.js"></script>
+  <script src="./js/faculty.js"></script>
+  <script src="./js/tweaks.js"></script>
 </body>
 </html>

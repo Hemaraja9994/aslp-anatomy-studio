@@ -37,6 +37,7 @@ let selected = null;
 let side = "r";
 let loadToken = 0;
 let appearance = "photoreal";
+let stageColor = 0x16110d;
 let labTable, labGrid;
 const cutPlane = new THREE.Plane(new THREE.Vector3(-1, 0, 0), 0.02);
 
@@ -167,7 +168,7 @@ function isolateByName(name) {
     if (m.material) {
       m.material.transparent = true;
       m.material.opacity = on ? 1 : 0.07;
-      if (on && m.material.emissive) m.material.emissive.setHex(appearance === "atlas" ? 0x144f4c : 0x3a2414);
+      if (on && m.material.emissive) m.material.emissive.setHex(appearance === "atlas" ? 0x3d2611 : 0x3a2414);
     }
   });
   if (els.pickLabel) {
@@ -405,8 +406,8 @@ function pick(event) {
 function applyLook() {
   if (!scene) return;
   const photo = appearance === "photoreal";
-  scene.background = new THREE.Color(photo ? 0x14110f : 0x0b1220);
-  if (scene.fog) scene.fog.color.setHex(photo ? 0x14110f : 0x0b1220);
+  scene.background = new THREE.Color(photo ? 0x16110d : stageColor);
+  if (scene.fog) scene.fog.color.setHex(photo ? 0x16110d : stageColor);
   if (labTable) labTable.visible = photo;
   if (labGrid) labGrid.visible = !photo;
   const btn = document.getElementById("btnLook");
@@ -417,8 +418,8 @@ function applyLook() {
 function initThree() {
   const canvas = document.getElementById("view");
   scene = new THREE.Scene();
-  scene.background = new THREE.Color(0x14110f);
-  scene.fog = new THREE.Fog(0x14110f, 18, 40);
+  scene.background = new THREE.Color(0x16110d);
+  scene.fog = new THREE.Fog(0x16110d, 18, 40);
   camera = new THREE.PerspectiveCamera(45, 1, 0.01, 80);
   camera.position.set(0.4, 0.2, 4.6);
   renderer = new THREE.WebGLRenderer({ canvas, antialias: !els.lite.checked, alpha: false, preserveDrawingBuffer: true });
@@ -454,7 +455,7 @@ function initThree() {
   bounce.position.set(0, -5, 2);
   scene.add(key, fill, rim, bounce);
 
-  labGrid = new THREE.GridHelper(10, 20, 0x1e334f, 0x15243a);
+  labGrid = new THREE.GridHelper(10, 20, 0x4a3d27, 0x2a2419);
   labGrid.position.y = -2.05;
   labGrid.visible = false;
   scene.add(labGrid);
@@ -637,6 +638,13 @@ function bind() {
     const t = e.target.closest("[data-id]");
     if (t) select(t.dataset.id);
   };
+  window.addEventListener("studio-stage-color", (e) => {
+    stageColor = e.detail;
+    if (!scene) return;
+    if (appearance === "photoreal") return;
+    scene.background = new THREE.Color(stageColor);
+    if (scene.fog) scene.fog.color.setHex(stageColor);
+  });
   bindDrawers();
 }
 
