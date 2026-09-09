@@ -10,6 +10,7 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;600&family=Spectral:wght@400;600&display=swap" rel="stylesheet" />
   <link rel="stylesheet" href="./css/studio.css?v=contrib1" />
+  <link rel="stylesheet" href="./css/study-tools.css?v=study1" />
   <script type="importmap">
   {
     "imports": {
@@ -69,7 +70,7 @@
           <div class="card">
             <h2>Active scene</h2>
             <h3 id="modTitle">Select a module</h3>
-            <p id="modSummary">Open a module from the left rail or start from the curriculum home. Click a mesh to isolate it.</p>
+            <p id="modSummary">Open a module from the left rail or start from the curriculum home. Select a structure for notes and view controls.</p>
             <div class="tags" id="modTags"></div>
           </div>
         </div>
@@ -116,12 +117,34 @@
         </div>
         <div class="panel-head">
           <h2>Dissection parts</h2>
-          <span class="count">click a label for notes</span>
+        </div>
+        <div class="study-tools" aria-label="Structure study tools">
+          <label class="study-search" for="partSearch">Find a structure in this module
+            <input id="partSearch" type="search" placeholder="e.g. stapes, facial nerve" autocomplete="off" />
+          </label>
+          <p class="study-selection" id="studySelection" role="status">Select a structure on the model or in the list.</p>
+          <div class="study-actions" role="group" aria-label="Selected structure actions">
+            <button class="btn" id="studyFocus" type="button" disabled>Focus</button>
+            <button class="btn" id="studyIsolate" type="button" aria-pressed="false" disabled>Isolate</button>
+            <button class="btn" id="studyFade" type="button" aria-pressed="false" disabled>Fade others</button>
+            <button class="btn" id="studyHide" type="button" disabled>Hide</button>
+            <button class="btn" id="studyRestore" type="button" disabled>Show all parts</button>
+          </div>
+          <p class="study-count" id="partCount" aria-live="polite"></p>
         </div>
         <div class="parts" id="partsList">
           <p class="muted">Open a module to list reconstructed parts. Click a name, a 3D label, or the mesh for a teaching note.</p>
         </div>
         <div class="part-explain" id="partExplain" hidden></div>
+        <details class="saved-views">
+          <summary>Saved study views <span id="viewCount">(0)</span></summary>
+          <p>Keep a camera angle, layers and selection for revision. Saved in this browser on this device.</p>
+          <form class="view-save" id="viewSaveForm">
+            <label for="viewName">View name<input id="viewName" maxlength="80" placeholder="e.g. Ossicular chain" required /></label>
+            <button class="btn" id="viewSave" type="submit" disabled>Save view</button>
+          </form>
+          <div id="savedViewList"></div>
+        </details>
         <div class="tabs">
           <button class="btn active" data-tab="learn">Learn</button>
           <button class="btn" data-tab="workbook">Workbook</button>
@@ -191,7 +214,7 @@
   <script src="./js/data.js"></script>
   <script src="./js/catalog.js"></script>
   <script src="./js/scenes.js"></script>
-  <script type="module" src="./js/studio.js"></script>
+  <script type="module" src="./js/studio.js?v=study1"></script>
   <script src="./js/faculty.js"></script>
   <script src="./js/tweaks.js"></script>
 </body>
