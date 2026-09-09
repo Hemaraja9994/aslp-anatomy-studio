@@ -7,6 +7,8 @@ import { attachClinic } from "./clinic.js";
 import { Tissue } from "./tissue.js";
 import { explainPart } from "./glossary.js";
 import { emptyStudy, selectPart, hidePart, partDisplay, readViews, VIEW_STORAGE_KEY, MAX_VIEWS } from "./study-state.js";
+import { createSpatialController } from "./spatial.js";
+import { createSectionsController } from "./sections.js";
 
 window.THREE = THREE;
 
@@ -47,6 +49,9 @@ let labTable, labGrid;
 const cutPlane = new THREE.Plane(new THREE.Vector3(-1, 0, 0), 0.02);
 const clipBox = new THREE.Box3();
 const clipCorner = new THREE.Vector3();
+
+let spatial = null;
+let sections = null;
 
 function toast(msg) {
   els.toast.textContent = msg;
@@ -331,6 +336,7 @@ function isolateByName(name) {
   applyLayers();
   showExplain(name, selected);
   renderParts();
+  if (spatial) spatial.onStudioSelection(name);
 }
 
 function resetIsolation() {
@@ -340,6 +346,7 @@ function resetIsolation() {
   hideExplain();
   if (els.pickLabel) els.pickLabel.style.display = "none";
   renderParts();
+  if (spatial) spatial.onStudioSelection(null);
 }
 
 function syncStudyTools() {
@@ -498,6 +505,9 @@ function bindStudyTools() {
 async function select(id, savedView = null) {
   closeDrawers();
   hideExplain();
+  if (sections && sections.getSection() !== "core") {
+    sections.setSection("core", { showHome: false });
+  }
   sceneReady = false;
   selected = null;
   study = emptyStudy();
@@ -541,6 +551,7 @@ async function select(id, savedView = null) {
     renderParts();
     fitCamera();
     if (savedView) restoreViewState(savedView);
+    if (spatial) spatial.setModule(current.id);
     setLoader(false);
     toast(savedView ? "Study view restored. Animation paused for study." : (result.visible || 0) + " dissection parts ready. Select a structure.");
   } catch (err) {
@@ -555,6 +566,7 @@ async function select(id, savedView = null) {
       toast("Could not load dissection meshes. Check the network.");
     }
     renderParts();
+    if (spatial) spatial.setModule(current.id);
     setLoader(false);
   }
 }
@@ -901,12 +913,23 @@ function initThree() {
   let fitResizeTimer = 0;
   function resize() {
     const stage = document.querySelector(".stage");
-    const w = Math.max(1, stage.clientWidth || 800);
-    const h = Math.max(1, stage.clientHeight || 600);
+    const canvas = renderer && renderer.domElement;
+    // In Spatial mode the canvas is inset; size to the painted box, not the full stage.
+    const spatialOn = document.body.classList.contains("spatial-on");
+    let w = Math.max(1, stage.clientWidth || 800);
+    let h = Math.max(1, stage.clientHeight || 600);
+    if (spatialOn && canvas) {
+      const cw = canvas.clientWidth;
+      const ch = canvas.clientHeight;
+      if (cw > 40 && ch > 40) {
+        w = cw;
+        h = ch;
+      }
+    }
     camera.aspect = w / h;
     camera.updateProjectionMatrix();
     renderer.setSize(w, h, false);
-    // Re-fit after layout settles (mobile stack, dock, orientation).
+    // Re-fit after layout settles (mobile stack, dock, orientation, spatial toggle).
     if (root && root.userData && root.userData.named && root.userData.named.length) {
       clearTimeout(fitResizeTimer);
       fitResizeTimer = setTimeout(() => fitCamera(), 90);
@@ -958,7 +981,8 @@ function bindDrawers() {
     dockHome.onclick = () => {
       closeDrawers();
       hideExplain();
-      els.home.style.display = "block";
+      if (sections) sections.setSection(sections.getSection() || "core");
+      else els.home.style.display = "block";
       syncStudyTools();
     };
   }
@@ -993,12 +1017,26 @@ function exportLogbook() {
   toast("Logbook exported.");
 }
 
+function zoomCamera(factor) {
+  if (!controls || !camera) return;
+  const dist = camera.position.distanceTo(controls.target);
+  const next = Math.min(controls.maxDistance, Math.max(controls.minDistance, dist * factor));
+  const dir = camera.position.clone().sub(controls.target).normalize();
+  controls.enableDamping = false;
+  controls.update();
+  camera.position.copy(controls.target).addScaledVector(dir, next);
+  controls.update();
+  controls.enableDamping = true;
+  syncLens();
+}
+
 function bind() {
   document.getElementById("openStudio").onclick = () => select("M06");
   document.getElementById("btnHome").onclick = () => {
     closeDrawers();
     hideExplain();
-    els.home.style.display = "block";
+    if (sections) sections.setSection(sections.getSection() || "core");
+    else els.home.style.display = "block";
     syncStudyTools();
   };
   document.getElementById("btnReset").onclick = () => { resetIsolation(); select(current.id); };
@@ -1077,6 +1115,29 @@ function bind() {
   bindLabelClicks();
   bindDrawers();
   bindStudyTools();
+  spatial = createSpatialController({
+    getCurrentModuleId: () => current && current.id,
+    getMeshLabels: () => [...new Set((root && root.userData.named || []).map((m) => m.userData.label).filter(Boolean))],
+    selectByLabel: (name) => isolateByName(name),
+    fitSpecimen: () => fitCamera(),
+    focusSelected: () => focusSelection(),
+    zoom3d: (factor) => zoomCamera(factor)
+  });
+  sections = createSectionsController({
+    openModule: (id) => {
+      if (spatial && spatial.isEnabled && spatial.isEnabled()) {
+        /* keep spatial if user already on; module load refreshes maps */
+      }
+      select(id);
+    },
+    onShowHome: () => {
+      hideExplain();
+      syncStudyTools();
+    },
+    onSectionChange: () => {
+      closeDrawers();
+    }
+  });
 }
 
 renderList("");
