@@ -825,7 +825,7 @@ body.rail-off .rail, body.side-off .side { padding: 0; border: 0; overflow: hidd
 .credentials {
   flex-shrink: 0;
   display: flex;
-  align-items: baseline;
+  align-items: flex-end;
   justify-content: space-between;
   gap: 16px 28px;
   padding: 8px 20px 10px;
@@ -845,6 +845,11 @@ body.rail-off .rail, body.side-off .side { padding: 0; border: 0; overflow: hidd
 }
 .credentials .cred-fine {
   margin: 2px 0 0;
+  color: var(--muted);
+  font-size: 11px;
+}
+.credentials .cred-contrib {
+  margin: 3px 0 0;
   color: var(--muted);
   font-size: 11px;
 }
