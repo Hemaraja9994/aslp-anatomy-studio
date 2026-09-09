@@ -2,6 +2,7 @@ window.ATLAS_CATALOG = {
   source: "Anatria3D / Z-Anatomy / BodyParts3D",
   license: "CC BY-SA 4.0",
   cdn: [
+    "./anatomy/",
     "https://cdn.jsdelivr.net/gh/Nurkan1/Anatria-3D@main/public/anatomy/",
     "https://raw.githubusercontent.com/Nurkan1/Anatria-3D/main/public/anatomy/"
   ],

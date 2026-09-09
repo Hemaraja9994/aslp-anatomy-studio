@@ -3,7 +3,7 @@
 **Concept and designed by Hemaraja Nayaka. S**
 
 ASLP Anatomy Studio does **not** use Elsevier Complete Anatomy assets.
-Dissection meshes are loaded at runtime from open scientific atlases.
+Dissection meshes come from open scientific atlases.
 The photoreal look is original tissue shading (triplanar maps + PBR) applied
 in the viewer. It is not a photograph of a cadaver and not a copy of any
 commercial anatomy product.
@@ -17,6 +17,22 @@ commercial anatomy product.
 - **Anatria3D** GLB packaging (Draco-compressed glTF, TA2 labels)  
   Licence: CC BY-SA 4.0  
   Source files: https://github.com/Nurkan1/Anatria-3D
+
+## Redistributed copies in this repository
+
+`anatomy/` holds unmodified copies of the nine Draco-compressed GLB meshes the
+17 modules reference, plus `manifest.json`, mirrored from the Anatria3D
+repository above so the studio does not depend on a third-party host staying
+online. That project's `LICENSE` and `NOTICE` are mirrored alongside them,
+unchanged.
+
+These meshes remain under **CC BY-SA 4.0**. Anyone redistributing them, with or
+without changes, must keep this attribution and license them under the same
+terms. Share-alike covers the meshes themselves; it does not extend to the
+original tissue shaders, overlays, curriculum data, or interface code here.
+
+`js/catalog.js` reads `./anatomy/` first and falls back to the jsDelivr and
+raw.githubusercontent copies if a local file is unavailable.
 
 ## Tissue appearance
 

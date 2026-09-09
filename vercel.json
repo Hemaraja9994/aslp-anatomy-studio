@@ -1,14 +1,43 @@
 {
   "cleanUrls": true,
   "redirects": [
-    { "source": "/studio", "destination": "/", "permanent": true },
-    { "source": "/studio.html", "destination": "/", "permanent": true }
+    {
+      "source": "/studio",
+      "destination": "/",
+      "permanent": true
+    },
+    {
+      "source": "/studio.html",
+      "destination": "/",
+      "permanent": true
+    }
   ],
   "headers": [
     {
+      "source": "/anatomy/(.*)",
+      "headers": [
+        {
+          "key": "Cache-Control",
+          "value": "public, max-age=31536000, immutable"
+        }
+      ]
+    },
+    {
+      "source": "/textures/(.*)",
+      "headers": [
+        {
+          "key": "Cache-Control",
+          "value": "public, max-age=604800"
+        }
+      ]
+    },
+    {
       "source": "/(.*)",
       "headers": [
-        { "key": "Cache-Control", "value": "public, max-age=300" }
+        {
+          "key": "Cache-Control",
+          "value": "public, max-age=300"
+        }
       ]
     }
   ]
