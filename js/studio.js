@@ -15,7 +15,7 @@ window.THREE = THREE;
 const data = window.STUDIO_DATA;
 const layersState = {
   surface: true, bone: true, muscle: true, membrane: true,
-  nerve: true, vessel: true, function: true, clinic: false, labels: true, cut: true
+  nerve: true, vessel: true, function: true, clinic: false, labels: true, cut: false
 };
 
 const els = {
@@ -47,6 +47,7 @@ let appearance = "photoreal";
 let stageColor = 0x16110d;
 let labTable, labGrid;
 const cutPlane = new THREE.Plane(new THREE.Vector3(-1, 0, 0), 0.02);
+const clipSize = new THREE.Vector3();
 const clipBox = new THREE.Box3();
 const clipCorner = new THREE.Vector3();
 
@@ -232,98 +233,143 @@ function applyLayers() {
 
 function syncLabels() {
   const host = document.getElementById("worldLabels");
+  const svg = document.getElementById("labelLines");
   if (!host || !renderer || !root || !camera) return;
   if (!layersState.labels || (els.home && els.home.style.display !== "none")) {
     host.style.display = "none";
+    if (svg) svg.style.display = "none";
     return;
   }
   host.style.display = "block";
+  if (svg) svg.style.display = "block";
+
   const canvas = renderer.domElement;
   const w = canvas.clientWidth || 1;
   const h = canvas.clientHeight || 1;
-  // Density controls only on stacked phone/tablet layout — desktop keeps full labels.
   const narrow = window.matchMedia("(max-width: 1040px)").matches;
   const phone = narrow && (w <= 520 || window.matchMedia("(max-width: 600px)").matches);
-  const maxShow = phone ? 5 : (narrow ? 8 : 64);
-  const marginX = phone ? 10 : (narrow ? 8 : 4);
-  const topSafe = phone ? 52 : (narrow ? 44 : 0);
-  const bottomSafe = phone ? Math.min(150, h * 0.24) : (narrow ? Math.min(120, h * 0.18) : 0);
-  const minGapX = phone ? 56 : (narrow ? 72 : 0);
-  const minGapY = phone ? 22 : (narrow ? 26 : 0);
+
+  const rowH = phone ? 24 : 27;
+  const marginX = phone ? 8 : 14;
+  // Measure the real chrome instead of guessing: the toolbar wraps to two rows
+  // on narrow stages and the caption card is taller on long module titles.
+  const stageRect = canvas.getBoundingClientRect();
+  const clearOf = (sel, fallback) => {
+    const el = document.querySelector(sel);
+    if (!el || !el.offsetParent) return fallback;
+    const r = el.getBoundingClientRect();
+    if (!r.height) return fallback;
+    return r;
+  };
+  const tb = clearOf(".stage .toolbar", null);
+  const cap = clearOf(".stage .stage-caption", null);
+  const topSafe = tb ? Math.max(0, tb.bottom - stageRect.top) + 10 : (phone ? 54 : 46);
+  const bottomSafe = cap
+    ? Math.max(0, stageRect.bottom - cap.top) + 10
+    : (phone ? Math.min(150, h * 0.24) : Math.min(120, h * 0.17));
+  const usable = Math.max(0, h - topSafe - bottomSafe);
+  const perSide = Math.max(1, Math.floor(usable / rowH));
+  const hardCap = phone ? 6 : (narrow ? 10 : perSide * 2);
+
   const tmp = new THREE.Vector3();
-  const placed = [];
+  const named = root.userData.named || [];
   const candidates = [];
+
   host.querySelectorAll("[data-part]").forEach((btn) => {
     const name = readPartName(btn);
-    const mesh = (root.userData.named || []).find((m) => m.userData.label === name && m.visible);
-    if (!mesh) {
-      btn.style.display = "none";
-      return;
-    }
+    const mesh = named.find((m) => m.userData.label === name && m.visible);
+    if (!mesh) { btn.style.display = "none"; return; }
     mesh.updateWorldMatrix(true, false);
     const box = new THREE.Box3().setFromObject(mesh);
-    if (box.isEmpty()) {
-      btn.style.display = "none";
-      return;
-    }
+    if (box.isEmpty()) { btn.style.display = "none"; return; }
     box.getCenter(tmp).project(camera);
-    if (tmp.z > 1 || tmp.x < -1.15 || tmp.x > 1.15 || tmp.y < -1.15 || tmp.y > 1.15) {
+    if (tmp.z > 1 || tmp.x < -1 || tmp.x > 1 || tmp.y < -1 || tmp.y > 1) {
       btn.style.display = "none";
       return;
     }
-    const x = (tmp.x * 0.5 + 0.5) * w;
-    const y = (-tmp.y * 0.5 + 0.5) * h;
-    const isSelected = !!(selected && selected.userData.label === name);
-    candidates.push({ btn, name, x, y, isSelected, z: tmp.z });
+    candidates.push({
+      btn,
+      name,
+      ax: (tmp.x * 0.5 + 0.5) * w,
+      ay: (-tmp.y * 0.5 + 0.5) * h,
+      z: tmp.z,
+      isSelected: !!(selected && selected.userData.label === name)
+    });
   });
+
+  // Nearest structures win a slot; the selected one always keeps its callout.
   candidates.sort((a, b) => {
     if (a.isSelected !== b.isSelected) return a.isSelected ? -1 : 1;
     return a.z - b.z;
   });
-  let shown = 0;
-  candidates.forEach((c, idx) => {
-    const { btn, x, y, isSelected } = c;
-    btn.classList.toggle("on", isSelected);
-    // Stagger alternate labels slightly on dense mobile views.
-    let sx = x;
-    let sy = y;
-    if (narrow && !isSelected) {
-      const bump = (idx % 2 === 0 ? -1 : 1) * (phone ? 10 : 14);
-      sx += bump;
-      sy += (idx % 3 - 1) * (phone ? 8 : 10);
+  const keep = candidates.slice(0, hardCap);
+  candidates.slice(hardCap).forEach((c) => { c.btn.style.display = "none"; });
+
+  // Split into a left and a right gutter, then rebalance so one side cannot
+  // overflow while the other sits empty.
+  const mid = w * 0.5;
+  keep.forEach((c) => { c.side = c.ax < mid ? "l" : "r"; });
+  ["l", "r"].forEach((side) => {
+    const over = keep.filter((c) => c.side === side);
+    if (over.length <= perSide) return;
+    const other = side === "l" ? "r" : "l";
+    over.sort((a, b) => (side === "l" ? b.ax - a.ax : a.ax - b.ax));
+    for (let i = 0; i < over.length - perSide; i++) {
+      if (keep.filter((c) => c.side === other).length >= perSide) break;
+      over[i].side = other;
     }
-    // On desktop, clamp into the canvas like main's teaching-note path.
-    if (!narrow) {
-      sx = Math.min(w - 16, Math.max(16, sx));
-      sy = Math.min(h - 16, Math.max(22, sy));
-      for (let k = 0; k < 10; k++) {
-        const clash = placed.some((p) => Math.abs(p.x - sx) < 86 && Math.abs(p.y - sy) < 20);
-        if (!clash) break;
-        sy = sy > 36 ? sy - 20 : sy + 20;
-      }
-    }
-    const outOfSafe = sx < marginX || sx > w - marginX || sy < topSafe || sy > h - bottomSafe;
-    let collides = false;
-    if (narrow && !isSelected) {
-      for (let i = 0; i < placed.length; i++) {
-        const p = placed[i];
-        if (Math.abs(p.x - sx) < minGapX && Math.abs(p.y - sy) < minGapY) {
-          collides = true;
-          break;
-        }
-      }
-    }
-    const keep = isSelected || (!outOfSafe && !collides && shown < maxShow);
-    if (!keep) {
-      btn.style.display = "none";
-      return;
-    }
-    btn.style.display = "block";
-    btn.style.left = sx + "px";
-    btn.style.top = sy + "px";
-    placed.push({ x: sx, y: sy });
-    shown += 1;
   });
+
+  const parts = [];
+  ["l", "r"].forEach((side) => {
+    const col = keep.filter((c) => c.side === side).sort((a, b) => a.ay - b.ay);
+    // Greedy top-down packing keeps vertical order, so leader lines rarely cross.
+    let cursor = topSafe;
+    col.forEach((c) => {
+      if (cursor > h - bottomSafe) { c.drop = true; return; }
+      c.ly = Math.max(cursor, Math.min(c.ay, h - bottomSafe));
+      cursor = c.ly + rowH;
+    });
+    // Pull the stack back up if it ran past the bottom.
+    const last = col.filter((c) => !c.drop).pop();
+    if (last && last.ly > h - bottomSafe) {
+      const shift = last.ly - (h - bottomSafe);
+      col.forEach((c) => { if (!c.drop) c.ly = Math.max(topSafe, c.ly - shift); });
+    }
+    col.forEach((c) => {
+      if (c.drop) { c.btn.style.display = "none"; return; }
+      const btn = c.btn;
+      btn.style.display = "block";
+      btn.classList.toggle("on", c.isSelected);
+      btn.classList.toggle("wlab-l", side === "l");
+      btn.classList.toggle("wlab-r", side === "r");
+      let lw = Number(btn.dataset.lw || 0);
+      if (!lw || btn.dataset.lwName !== c.name) {
+        btn.style.left = "-9999px";
+        lw = btn.offsetWidth || 120;
+        btn.dataset.lw = String(lw);
+        btn.dataset.lwName = c.name;
+      }
+      const lx = side === "l" ? marginX : Math.max(marginX, w - marginX - lw);
+      btn.style.left = lx + "px";
+      btn.style.top = c.ly + "px";
+      const edge = side === "l" ? lx + lw + 5 : lx - 5;
+      let elbow = side === "l" ? edge + 16 : edge - 16;
+      elbow = side === "l" ? Math.min(elbow, Math.max(edge + 4, c.ax - 6))
+                           : Math.max(elbow, Math.min(edge - 4, c.ax + 6));
+      parts.push(
+        `<path d="M${edge.toFixed(1)} ${c.ly.toFixed(1)} L${elbow.toFixed(1)} ${c.ly.toFixed(1)} L${c.ax.toFixed(1)} ${c.ay.toFixed(1)}" class="ll${c.isSelected ? " on" : ""}"/>` +
+        `<circle cx="${c.ax.toFixed(1)}" cy="${c.ay.toFixed(1)}" r="${c.isSelected ? 4 : 2.8}" class="ld${c.isSelected ? " on" : ""}"/>`
+      );
+    });
+  });
+
+  if (svg) {
+    svg.setAttribute("viewBox", `0 0 ${w} ${h}`);
+    svg.setAttribute("width", w);
+    svg.setAttribute("height", h);
+    svg.innerHTML = parts.join("");
+  }
 }
 
 function isolateByName(name) {
@@ -653,6 +699,23 @@ function fitCamera() {
   }
 }
 
+// The lab table only helps when the whole specimen is in frame. Close up it is
+// just a grey wall behind the structure, which is what read as "clipped".
+function stageFloorWanted() {
+  if (!camera || !controls) return true;
+  return camera.position.distanceTo(controls.target) > 1.6;
+}
+
+function syncStageFloor() {
+  if (!labTable || !camera || !controls) return;
+  const photo = appearance === "photoreal";
+  const dist = camera.position.distanceTo(controls.target);
+  const fade = THREE.MathUtils.clamp((dist - 1.6) / 1.4, 0, 1);
+  labTable.visible = photo && fade > 0.01;
+  labTable.material.opacity = fade;
+  if (labGrid) labGrid.visible = !photo && fade > 0.01;
+}
+
 function syncLens() {
   if (!camera || !controls) return;
   camera.updateMatrixWorld(true);
@@ -673,18 +736,36 @@ function syncLens() {
     zMin = dist * 0.25;
     zMax = dist * 4;
   }
-  let near = zMin > 0.08 ? zMin * 0.25 : 0.001;
-  near = THREE.MathUtils.clamp(near, 0.001, 1.5);
-  let far = Math.max(zMax * 2.2, zMin + 4, controls.maxDistance * 1.8, 24);
-  if (far / near > 10000) near = far / 10000;
+  const dist = camera.position.distanceTo(controls.target);
+  // Scene radius, not controls.maxDistance: maxDistance is monotonic and used to
+  // inflate far, which dragged near up with it and clipped close-up structures.
+  const radius = clipBox.isEmpty() ? 2 : clipBox.getSize(clipSize).length() * 0.5;
+  if (!Number.isFinite(zMin) || !Number.isFinite(zMax)) {
+    zMin = dist * 0.25;
+    zMax = dist * 4;
+  }
+  let near = Math.min(zMin, dist) * 0.2;
+  near = THREE.MathUtils.clamp(near, 0.0015, 0.6);
+  let far = Math.max(zMax * 1.6, dist + radius * 2.5, 12);
+  // Keep the ratio inside a comfortable depth-buffer range by lifting far,
+  // never by pushing near forward into the model.
+  if (far / near > 20000) far = near * 20000;
   if (camera.near !== near || camera.far !== far) {
     camera.near = near;
     camera.far = far;
     camera.updateProjectionMatrix();
   }
   if (scene && scene.fog) {
-    scene.fog.near = Math.max(zMax * 2.4, far * 0.72);
-    scene.fog.far = far;
+    // Fog must start beyond the specimen and always end after it starts, or the
+    // whole model renders as flat background colour.
+    const fogNear = Math.max(zMax * 1.15, dist + radius * 0.5, near * 4);
+    const fogFar = Math.max(fogNear * 1.6, fogNear + radius * 3, far);
+    scene.fog.near = fogNear;
+    scene.fog.far = fogFar;
+    if (camera.far < fogFar) {
+      camera.far = fogFar;
+      camera.updateProjectionMatrix();
+    }
   }
 }
 
@@ -825,7 +906,7 @@ function applyLook() {
   const photo = appearance === "photoreal";
   scene.background = new THREE.Color(photo ? 0x16110d : stageColor);
   if (scene.fog) scene.fog.color.setHex(photo ? 0x16110d : stageColor);
-  if (labTable) labTable.visible = photo;
+  if (labTable) labTable.visible = photo && stageFloorWanted();
   if (labGrid) labGrid.visible = !photo;
   const btn = document.getElementById("btnLook");
   if (btn) btn.textContent = photo ? "Photoreal" : "Atlas colours";
@@ -856,14 +937,15 @@ function initThree() {
   const key = new THREE.DirectionalLight(0xfff6ea, 2.15);
   key.position.set(3.2, 7.2, 5.2);
   key.castShadow = !els.lite.checked;
-  key.shadow.mapSize.set(1024, 1024);
+  key.shadow.mapSize.set(2048, 2048);
   key.shadow.camera.near = 0.5;
   key.shadow.camera.far = 24;
   key.shadow.camera.left = -6;
   key.shadow.camera.right = 6;
   key.shadow.camera.top = 6;
   key.shadow.camera.bottom = -6;
-  key.shadow.bias = -0.0008;
+  key.shadow.bias = -0.0004;
+  key.shadow.normalBias = 0.02;
   const fill = new THREE.DirectionalLight(0xb7cce0, 0.55);
   fill.position.set(-6, 2, -1);
   const rim = new THREE.DirectionalLight(0xffe2c4, 0.85);
@@ -884,6 +966,7 @@ function initThree() {
   labTable.rotation.x = -Math.PI / 2;
   labTable.position.y = -1.92;
   labTable.receiveShadow = true;
+  labTable.material.transparent = true;
   scene.add(labTable);
 
   root = new THREE.Group();
@@ -948,6 +1031,7 @@ function initThree() {
     const t = clock.getElapsedTime();
     controls.update();
     syncLens();
+    syncStageFloor();
     if (playing && root.userData.animate) root.userData.animate(t);
     syncLabels();
     renderer.render(scene, camera);

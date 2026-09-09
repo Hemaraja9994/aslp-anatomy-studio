@@ -67,10 +67,11 @@ function loadOne(name, url) {
   });
 }
 
-function patchPhotoreal(material, kind) {
+function patchPhotoreal(material, kind, detail) {
   const id = KIND_ID[kind] ?? 8;
   material.defines = Object.assign(material.defines || {}, { TISSUE_KIND: id });
-  material.customProgramCacheKey = () => "aslp-photo-v3-" + kind;
+  if (detail) material.defines.TISSUE_DETAIL = 1;
+  material.customProgramCacheKey = () => "aslp-photo-v4-" + kind + (detail ? "-d" : "");
   material.onBeforeCompile = (shader) => {
     shader.vertexShader = "varying vec3 vWp; varying vec3 vWn;\n" + shader.vertexShader.replace(
       "#include <project_vertex>",
@@ -150,6 +151,21 @@ function patchPhotoreal(material, kind) {
           diffuseColor.rgb = col;
         }
       `)
+      .replace("#include <normal_fragment_maps>", `
+        #include <normal_fragment_maps>
+        #ifdef TISSUE_DETAIL
+        {
+          vec3 dp = vWp * 34.0;
+          float e = 0.35;
+          float n0 = vn(dp);
+          vec3 g = vec3(vn(dp + vec3(e, 0.0, 0.0)) - n0,
+                        vn(dp + vec3(0.0, e, 0.0)) - n0,
+                        vn(dp + vec3(0.0, 0.0, e)) - n0);
+          vec3 gv = (viewMatrix * vec4(g, 0.0)).xyz;
+          normal = normalize(normal - gv * 0.55);
+        }
+        #endif
+      `)
       .replace("#include <roughnessmap_fragment>", `
         #include <roughnessmap_fragment>
         roughnessFactor = clamp(roughnessFactor * (0.84 + 0.26 * fbm(vWp * 5.0)) - 0.07 * sin(dot(vWp, vec3(2.1, 5.3, 1.7))), 0.08, 0.94);
@@ -184,7 +200,7 @@ function makeMaterial(kind, appearance, lite) {
   if (photo) {
     const mapName = MAP_FOR[kind] || "skin";
     if (textures[mapName]) mat.map = textures[mapName];
-    patchPhotoreal(mat, kind);
+    patchPhotoreal(mat, kind, !lite);
   }
   return mat;
 }
