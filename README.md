@@ -18,13 +18,13 @@ This is not Elsevier Complete Anatomy, not cadaver photogrammetry, not a surgica
 - Clinic overlays for devices and windows (toggle **Clinic overlay**)
 - UG and PG outcomes, worksheets, OSCE stations, viva frames
 - Student notes in the browser and exportable logbook JSON
-- **Spatial** workspace (student toolbar): linked diagram + educational CT schematic + live 3D for M06–M08 (ear / middle ear / cochlea), with shared selection and Fit / Focus / Zoom tools
+- **Spatial** workspace (student toolbar): linked diagram + educational CT schematic + live 3D for **all 17 RCI modules (M00–M16)**, with region-specific schematics, shared selection, and Fit / Focus / Zoom tools
 
 ## Studio sections
 
 Top tabs (kept alongside Student / Faculty):
 
-1. **RCI Core** — the 17 curriculum modules, study tools, and **Spatial** linked diagram / teaching CT / 3D (strongest on M06–M08).
+1. **RCI Core** — the 17 curriculum modules, study tools, and **Spatial** linked diagram / teaching CT / 3D for every module (M00–M16).
 2. **Advanced Atlas** — open head & neck / ear resources with subsections (*Ear & temporal bone*, *Larynx & airway*, *Nose & sinuses*, *Pharynx / neck*). Cards link out to SPL Open Anatomy atlases, OpenEar (CC BY 4.0, Zenodo DOI), and MIDA (CC0). **No Netter / Elsevier assets.**
 3. **Pathology** — curated, de-identified teaching cases (otology, larynx/voice, nose/sinus, H&N oncology examples) with teaching points and open link-outs (e.g. Mass Eye & Ear otopathology resources, TCIA, OpenEar). Teaching only — not for diagnosis.
 
@@ -35,7 +35,7 @@ Top tabs (kept alongside Student / Faculty):
 3. Toggle **Photoreal** for teaching colours, **Clinic overlay** for devices, **Labels** for names on the mesh.
 4. Use **Right side / Left side** for paired organs.
 5. Workbook / OSCE / Exam panels sit on the right.
-6. Toggle **Spatial** for linked schematic diagram and teaching CT beside the same 3D canvas (strongest on M06–M08). CT panes are labelled as educational schematics — not real patient scans.
+6. Toggle **Spatial** for linked schematic diagram and teaching CT beside the same 3D canvas (all M00–M16). CT panes are labelled as educational schematics — not real patient scans.
 
 On a phone or tablet the 3D stage stays full-screen. Use the bottom bar: **Modules**, **Home**, **Learn**. Type and spacing scale with the viewport; layer and part buttons are sized for touch.
 

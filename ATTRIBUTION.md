@@ -48,3 +48,7 @@ Pathology entries are curated classroom patterns with optional link-outs. Prefer
 
 Pathology cards are **not for diagnosis**, staging, or clinical decision-making. No commercial anatomy plate libraries are redistributed here.
 
+
+## Spatial linked views (diagram + teaching CT)
+
+SVG diagrams and greyscale CT-style panes in the Spatial workspace are **original educational schematics** drawn for this studio. They are not patient DICOM, not diagnostic imaging, and not copied from commercial atlases. Structure labels are matched to BodyParts3D / Z-Anatomy mesh names where possible; some teaching callouts (planes, scalae, otolith organs, RLN) have no dedicated mesh and link only within diagram/CT panes.
