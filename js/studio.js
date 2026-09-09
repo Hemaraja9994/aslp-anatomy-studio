@@ -6,6 +6,7 @@ import { attachPhysiology } from "./physiology.js";
 import { attachClinic } from "./clinic.js";
 import { Tissue } from "./tissue.js";
 import { explainPart } from "./glossary.js";
+import { emptyStudy, selectPart, hidePart, partDisplay, readViews, VIEW_STORAGE_KEY, MAX_VIEWS } from "./study-state.js";
 
 window.THREE = THREE;
 
@@ -35,6 +36,9 @@ const els = {
 let current = data.modules[6];
 let renderer, scene, camera, root, clock, controls, playing = true, raycaster, pointer;
 let selected = null;
+let study = emptyStudy();
+let sceneReady = false;
+const materialDefaults = new WeakMap();
 let side = "r";
 let loadToken = 0;
 let appearance = "photoreal";
@@ -120,6 +124,7 @@ function renderList(filter) {
 
 function renderParts() {
   if (!els.parts) return;
+  syncStudyTools();
   const meshes = (root && root.userData.named) || [];
   if (!meshes.length) {
     els.parts.innerHTML = "<p class='muted'>Open a module to list dissection parts.</p>";
@@ -128,10 +133,15 @@ function renderParts() {
     return;
   }
   const unique = [...new Set(meshes.map((m) => m.userData.label).filter(Boolean))].sort();
-  els.parts.innerHTML = unique.map((name) => {
+  const query = (document.getElementById("partSearch").value || "").trim().toLowerCase();
+  const matches = unique.filter((name) => name.toLowerCase().includes(query));
+  document.getElementById("partCount").textContent = `${matches.length} of ${unique.length} structures · ${study.hidden.length} hidden`;
+  els.parts.innerHTML = matches.map((name) => {
     const on = selected && selected.userData.label === name ? " on" : "";
-    return `<button class="part${on}" type="button" data-part="${encodeURIComponent(name)}">${esc(name)}</button>`;
-  }).join("");
+    const mesh = meshes.find((m) => m.userData.label === name);
+    const hidden = study.hidden.includes(name) || !layersState[mesh.userData.layer];
+    return `<button class="part${on}${hidden ? " is-hidden" : ""}" type="button" aria-pressed="${!!on}" data-part="${encodeURIComponent(name)}">${esc(name)}${hidden ? "<small>Hidden · select to reveal</small>" : ""}</button>`;
+  }).join("") || "<p class='muted'>No matching structures in this module.</p>";
   const host = document.getElementById("worldLabels");
   if (host) {
     host.innerHTML = unique.map((name) =>
@@ -180,8 +190,35 @@ function applyLayers() {
     const layer = obj.userData && obj.userData.layer;
     if (!layer) return;
     if (layer === "labels" || layer === "cut") return;
-    obj.visible = !!layersState[layer];
+    obj.visible = !!layersState[layer] && !(layer === "function" && study.mode === "isolate");
   });
+  (root.userData.named || []).forEach((mesh) => {
+    const display = partDisplay(study, mesh.userData.label, !!layersState[mesh.userData.layer]);
+    mesh.visible = display.visible;
+    const materials = Array.isArray(mesh.material) ? mesh.material : [mesh.material];
+    materials.filter(Boolean).forEach((material) => {
+      if (!materialDefaults.has(material)) materialDefaults.set(material, {
+        opacity: material.opacity, transparent: material.transparent,
+        depthWrite: material.depthWrite, emissive: material.emissive?.clone()
+      });
+      const original = materialDefaults.get(material);
+      const transparent = display.faded || original.transparent;
+      if (material.transparent !== transparent) material.needsUpdate = true;
+      material.transparent = transparent;
+      material.opacity = display.faded ? Math.min(original.opacity, 0.12) : original.opacity;
+      material.depthWrite = display.faded ? false : original.depthWrite;
+      if (material.emissive && original.emissive) {
+        material.emissive.copy(original.emissive);
+        if (display.selected) material.emissive.setHex(0x3a2414);
+      }
+    });
+  });
+  document.querySelectorAll("[data-layer]").forEach((btn) => {
+    const on = !!layersState[btn.dataset.layer];
+    btn.classList.toggle("on", on);
+    btn.setAttribute("aria-pressed", String(on));
+  });
+  document.getElementById("btnClinic").setAttribute("aria-pressed", String(layersState.clinic));
   if (renderer) renderer.clippingPlanes = layersState.cut ? [cutPlane] : [];
   const labelHost = document.getElementById("worldLabels");
   if (labelHost) labelHost.style.display = layersState.labels ? "block" : "none";
@@ -284,52 +321,188 @@ function syncLabels() {
   });
 }
 
-function clearHighlight() {
-  if (!root) return;
-  (root.userData.named || []).forEach((m) => {
-    if (m.material && m.material.emissive) m.material.emissive.setHex(0x000000);
-    if (m.material) {
-      const membrane = m.userData.kind === "membrane" || m.userData.layer === "membrane";
-      m.material.transparent = membrane;
-      m.material.opacity = membrane ? 0.86 : 1;
-    }
-  });
-}
-
 function isolateByName(name) {
+  if (!sceneReady || !root) return;
   const meshes = (root.userData.named || []).filter((m) => m.userData.label === name);
   selected = meshes[0] || null;
-  if (selected && selected.userData.layer === "clinic") {
-    layersState.clinic = true;
-    document.querySelector('[data-layer="clinic"]')?.classList.add("on");
-  }
-  if (meshes.length) {
-    clearHighlight();
-    (root.userData.named || []).forEach((m) => {
-      const on = m.userData.label === name;
-      if (m.material) {
-        m.material.transparent = true;
-        m.material.opacity = on ? 1 : 0.07;
-        if (on && m.material.emissive) m.material.emissive.setHex(appearance === "atlas" ? 0x3d2611 : 0x3a2414);
-      }
-    });
-  }
+  if (!selected) return;
+  study = selectPart(study, name);
+  meshes.forEach((mesh) => { layersState[mesh.userData.layer] = true; });
+  applyLayers();
   showExplain(name, selected);
   renderParts();
 }
 
 function resetIsolation() {
   selected = null;
-  clearHighlight();
+  study = emptyStudy();
   applyLayers();
   hideExplain();
   if (els.pickLabel) els.pickLabel.style.display = "none";
   renderParts();
 }
 
-async function select(id) {
+function syncStudyTools() {
+  const active = sceneReady && !!selected;
+  ["studyFocus", "studyIsolate", "studyFade", "studyHide"].forEach((id) => {
+    document.getElementById(id).disabled = !active;
+  });
+  document.getElementById("studyRestore").disabled = !sceneReady;
+  document.getElementById("viewSave").disabled = !sceneReady || els.home.style.display !== "none";
+  document.getElementById("studyIsolate").setAttribute("aria-pressed", String(study.mode === "isolate"));
+  document.getElementById("studyFade").setAttribute("aria-pressed", String(study.mode === "fade"));
+  const mode = study.mode === "isolate" ? " · isolated" : study.mode === "fade" ? " · surrounding parts faded" : "";
+  document.getElementById("studySelection").textContent = selected
+    ? selected.userData.label + mode : "Select a structure on the model or in the list.";
+}
+
+function focusSelection() {
+  if (!sceneReady || !selected) return;
+  const meshes = root.userData.named.filter((m) => m.userData.label === selected.userData.label);
+  const box = namedBox(meshes);
+  if (box.isEmpty()) return;
+  const center = box.getCenter(new THREE.Vector3());
+  const radius = Math.max(box.getSize(new THREE.Vector3()).length() / 2, 0.02);
+  const halfFov = THREE.MathUtils.degToRad(camera.fov / 2);
+  const halfHorizontal = Math.atan(Math.tan(halfFov) * camera.aspect);
+  const distance = Math.max(radius / Math.sin(Math.min(halfFov, halfHorizontal)) * 1.5, controls.minDistance);
+  const direction = camera.position.clone().sub(controls.target).normalize();
+  // Flush OrbitControls damping so a saved or focused view does not drift.
+  controls.enableDamping = false;
+  controls.update();
+  controls.maxDistance = Math.max(controls.maxDistance, distance * 2);
+  camera.position.copy(center).addScaledVector(direction, distance);
+  controls.target.copy(center);
+  controls.update();
+  controls.enableDamping = true;
+  syncLens();
+  closeDrawers();
+}
+
+function getSavedViews() {
+  try { return readViews(localStorage.getItem(VIEW_STORAGE_KEY), data.modules.map((m) => m.id)); }
+  catch { return []; }
+}
+
+function writeSavedViews(views) {
+  try { localStorage.setItem(VIEW_STORAGE_KEY, JSON.stringify(views)); return true; }
+  catch { toast("Views could not be saved. Browser storage may be full or unavailable."); return false; }
+}
+
+function renderSavedViews() {
+  const views = getSavedViews();
+  document.getElementById("viewCount").textContent = `(${views.length})`;
+  document.getElementById("savedViewList").innerHTML = views.map((view) =>
+    `<div class="saved-view"><button class="btn view-open" type="button" data-view-open="${esc(view.id)}">${esc(view.name)}<small>${esc(view.moduleId)} · ${view.side === "r" ? "Right" : "Left"} · ${esc(view.study.selected || "Full scene")}</small></button><button class="btn view-remove" type="button" data-view-remove="${esc(view.id)}" aria-label="Remove ${esc(view.name)}">×</button></div>`
+  ).join("") || "<p>No saved views yet.</p>";
+}
+
+function restoreViewState(view) {
+  const names = new Set(root.userData.named.map((m) => m.userData.label));
+  study = {
+    selected: names.has(view.study.selected) ? view.study.selected : null,
+    mode: names.has(view.study.selected) ? view.study.mode : "all",
+    hidden: view.study.hidden.filter((name) => names.has(name))
+  };
+  Object.keys(layersState).forEach((key) => {
+    if (typeof view.layers[key] === "boolean") layersState[key] = view.layers[key];
+  });
+  selected = root.userData.named.find((m) => m.userData.label === study.selected) || null;
+  applyLayers();
+  controls.enableDamping = false;
+  controls.update();
+  camera.position.fromArray(view.camera);
+  controls.target.fromArray(view.target);
+  const distance = camera.position.distanceTo(controls.target);
+  controls.maxDistance = Math.max(controls.maxDistance, distance * 2);
+  controls.minDistance = Math.min(controls.minDistance, distance * 0.5);
+  controls.update();
+  controls.enableDamping = true;
+  syncLens();
+  playing = false;
+  document.getElementById("btnPlay").innerHTML = `Play<span class="btn-rest"> physiology</span>`;
+  if (selected) showExplain(study.selected, selected); else hideExplain();
+  renderParts();
+}
+
+function bindStudyTools() {
+  document.getElementById("partSearch").oninput = renderParts;
+  document.getElementById("studyFocus").onclick = focusSelection;
+  [["studyIsolate", "isolate"], ["studyFade", "fade"]].forEach(([id, mode]) => {
+    document.getElementById(id).onclick = () => {
+      if (!selected || !sceneReady) return;
+      study.mode = study.mode === mode ? "all" : mode;
+      applyLayers();
+      renderParts();
+      closeDrawers();
+    };
+  });
+  document.getElementById("studyHide").onclick = () => {
+    if (!selected || !sceneReady) return;
+    study = hidePart(study);
+    selected = null;
+    applyLayers();
+    hideExplain();
+    renderParts();
+  };
+  document.getElementById("studyRestore").onclick = () => {
+    if (!sceneReady) return;
+    // Keep optional labels, cut plane and animation/device overlays as chosen.
+    ["surface", "bone", "muscle", "membrane", "nerve", "vessel"].forEach((key) => { layersState[key] = true; });
+    resetIsolation();
+  };
+  document.getElementById("viewSaveForm").onsubmit = (event) => {
+    event.preventDefault();
+    if (!sceneReady || els.home.style.display !== "none") return;
+    const input = document.getElementById("viewName");
+    const name = input.value.trim();
+    if (!name) { input.focus(); return; }
+    const views = getSavedViews();
+    if (views.length >= MAX_VIEWS) { toast(`You have ${MAX_VIEWS} views. Remove a view before saving another.`); return; }
+    const view = {
+      version: 1, id: crypto.randomUUID(), name, moduleId: current.id, side, appearance,
+      camera: camera.position.toArray(), target: controls.target.toArray(),
+      layers: { ...layersState }, study: { ...study, hidden: [...study.hidden] }
+    };
+    if (!writeSavedViews([view, ...views])) return;
+    input.value = "";
+    renderSavedViews();
+    toast("Study view saved in this browser.");
+  };
+  document.getElementById("savedViewList").onclick = async (event) => {
+    const open = event.target.closest("[data-view-open]");
+    const remove = event.target.closest("[data-view-remove]");
+    const views = getSavedViews();
+    if (remove) {
+      if (writeSavedViews(views.filter((v) => v.id !== remove.dataset.viewRemove))) renderSavedViews();
+      return;
+    }
+    if (!open) return;
+    const view = views.find((v) => v.id === open.dataset.viewOpen);
+    if (!view) return;
+    const reload = !sceneReady || current.id !== view.moduleId || side !== view.side || appearance !== view.appearance;
+    side = view.side;
+    appearance = view.appearance;
+    document.getElementById("btnSide").innerHTML = `${side === "r" ? "Right" : "Left"}<span class="btn-rest"> side</span>`;
+    applyLook();
+    els.home.style.display = "none";
+    closeDrawers();
+    if (reload) await select(view.moduleId, view);
+    else { restoreViewState(view); toast("Study view restored. Animation paused for study."); }
+  };
+  window.addEventListener("storage", (event) => { if (event.key === VIEW_STORAGE_KEY) renderSavedViews(); });
+  renderSavedViews();
+  syncStudyTools();
+}
+
+async function select(id, savedView = null) {
   closeDrawers();
   hideExplain();
+  sceneReady = false;
+  selected = null;
+  study = emptyStudy();
+  document.getElementById("partSearch").value = "";
+  syncStudyTools();
   current = data.modules.find((m) => m.id === id) || data.modules[0];
   els.home.style.display = "none";
   els.title.textContent = current.id + " · " + current.title;
@@ -338,34 +511,42 @@ async function select(id) {
   renderList(els.search.value);
   showTab("learn");
   const token = ++loadToken;
+  const nextRoot = new THREE.Group();
+  const moduleAtLoad = current;
   setLoader(true, 0.05, "Fetching BodyParts3D / Z-Anatomy meshes…");
   try {
-    const result = await StudioAtlas.build(current.scene, root, {
+    const result = await StudioAtlas.build(moduleAtLoad.scene, nextRoot, {
       side,
       appearance,
       lite: !!(els.lite && els.lite.checked),
       onProgress: (pct, file) => {
-        setLoader(true, pct, "Loading " + String(file).replace("_male.glb", "") + "…");
+        if (token === loadToken) setLoader(true, pct, "Loading " + String(file).replace("_male.glb", "") + "…");
       }
     });
-    if (token !== loadToken) return;
+    if (token !== loadToken) { disposeStudyMaterials(nextRoot); return; }
+    scene.remove(root);
+    disposeStudyMaterials(root);
+    root = nextRoot;
+    scene.add(root);
     attachPhysiology(current.scene, root);
     attachClinic(current.scene, root, current.id);
     if (current.id === "M14" || current.id === "M16") {
       layersState.clinic = true;
       document.querySelector('[data-layer="clinic"]')?.classList.add("on");
     }
+    sceneReady = true;
     applyLayers();
-    selected = null;
     hideExplain();
     if (els.pickLabel) els.pickLabel.style.display = "none";
     renderParts();
     fitCamera();
+    if (savedView) restoreViewState(savedView);
     setLoader(false);
-    toast((result.visible || 0) + " dissection parts ready. Click a structure.");
+    toast(savedView ? "Study view restored. Animation paused for study." : (result.visible || 0) + " dissection parts ready. Select a structure.");
   } catch (err) {
     console.error(err);
     if (token !== loadToken) return;
+    disposeStudyMaterials(nextRoot);
     if (window.StudioScenes) {
       window.StudioScenes.build(current.scene, root);
       window.StudioScenes.applyLayers(root, layersState);
@@ -376,6 +557,15 @@ async function select(id) {
     renderParts();
     setLoader(false);
   }
+}
+
+function disposeStudyMaterials(group) {
+  // Atlas geometry and textures are shared by the download cache.
+  const materials = new Set();
+  (group.userData.named || []).forEach((mesh) => {
+    (Array.isArray(mesh.material) ? mesh.material : [mesh.material]).forEach((m) => { if (m) materials.add(m); });
+  });
+  materials.forEach((material) => material.dispose());
 }
 
 function namedBox(meshes) {
@@ -769,6 +959,7 @@ function bindDrawers() {
       closeDrawers();
       hideExplain();
       els.home.style.display = "block";
+      syncStudyTools();
     };
   }
   if (mask) mask.onclick = closeDrawers;
@@ -808,6 +999,7 @@ function bind() {
     closeDrawers();
     hideExplain();
     els.home.style.display = "block";
+    syncStudyTools();
   };
   document.getElementById("btnReset").onclick = () => { resetIsolation(); select(current.id); };
   document.getElementById("btnPlay").onclick = () => {
@@ -837,7 +1029,6 @@ function bind() {
       if (root && root.userData.named && root.userData.named.length) {
         Tissue.repaint(root, { appearance, lite: !!(els.lite && els.lite.checked) });
         applyLayers();
-        if (selected) isolateByName(selected.userData.label);
         toast(appearance === "photoreal" ? "Photoreal dissection look." : "Teaching atlas colours.");
       }
     };
@@ -852,6 +1043,7 @@ function bind() {
       layersState[key] = !layersState[key];
       btn.classList.toggle("on", layersState[key]);
       applyLayers();
+      renderParts();
     };
   });
   document.querySelectorAll(".tabs .btn").forEach((b) => {
@@ -884,6 +1076,7 @@ function bind() {
   });
   bindLabelClicks();
   bindDrawers();
+  bindStudyTools();
 }
 
 renderList("");
