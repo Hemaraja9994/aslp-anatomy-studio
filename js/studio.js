@@ -2,7 +2,8 @@ import * as THREE from "three";
 import { OrbitControls } from "three/addons/controls/OrbitControls.js";
 import { RoomEnvironment } from "three/addons/environments/RoomEnvironment.js";
 import { EffectComposer } from "three/addons/postprocessing/EffectComposer.js";
-import { SSAOPass } from "three/addons/postprocessing/SSAOPass.js";
+import { RenderPass } from "three/addons/postprocessing/RenderPass.js";
+import { GTAOPass } from "three/addons/postprocessing/GTAOPass.js";
 import { OutputPass } from "three/addons/postprocessing/OutputPass.js";
 import { StudioAtlas } from "./atlas.js";
 import { attachPhysiology } from "./physiology.js";
@@ -721,15 +722,18 @@ function buildComposer() {
     composer = new EffectComposer(renderer, target);
     composer.setPixelRatio(renderer.getPixelRatio());
     composer.setSize(w, h);
-    // SSAOPass renders its own beauty pass, so it replaces RenderPass rather
-    // than following it.
-    gtaoPass = new SSAOPass(scene, camera, w, h);
-    gtaoPass.output = SSAOPass.OUTPUT.Default;
-    // World units: the specimen is normalised to ~3.4 across, so the sampling
-    // kernel has to stay well inside a single structure.
-    gtaoPass.kernelRadius = 0.14;
-    gtaoPass.minDistance = 0.002;
-    gtaoPass.maxDistance = 0.12;
+    // GTAOPass blends occlusion over whatever RenderPass already drew, so our
+    // materials, clipping planes and the OutputPass tone mapping all survive.
+    // SSAOPass cannot be used here: it renders its own beauty pass internally,
+    // which bypasses OutputPass and comes out untonemapped.
+    composer.addPass(new RenderPass(scene, camera));
+    gtaoPass = new GTAOPass(scene, camera, w, h);
+    gtaoPass.output = GTAOPass.OUTPUT.Default;
+    gtaoPass.blendIntensity = aoTune.intensity;
+    gtaoPass.updateGtaoMaterial({
+      radius: aoTune.radius, distanceExponent: 1.0, thickness: 1.0,
+      scale: 1.0, samples: 16, screenSpaceRadius: false
+    });
     composer.addPass(gtaoPass);
     composer.addPass(new OutputPass());
   } catch (err) {
@@ -769,17 +773,28 @@ window.StudioRender = {
     gtaoPass.output = n | 0;
     return gtaoPass.output;
   },
-  aoParams: (o) => {
-    if (!gtaoPass) return false;
-    Object.assign(gtaoPass, o);
-    return true;
-  },
+  aoParams: (o) => { Object.assign(aoTune, o || {}); syncAO(); return { ...aoTune }; },
   setAO: (on) => {
     if (on && !composer) buildComposer();
     else if (!on && composer) disposeComposer();
     return !!composer;
   }
 };
+
+// SSAOPass copies cameraNear/cameraFar into its shader once, in the
+// constructor, and never again -- only kernelRadius/minDistance/maxDistance are
+// refreshed per frame. buildComposer runs before the first syncLens, so the
+// shader was stuck on the camera's initial near 0.01 / far 400. The occlusion
+// test compares a depth delta normalised over that range, so a real 0.1-unit
+// gap came out at 0.00025, below minDistance, and every sample was rejected.
+// That is why the AO buffer was blank at every kernel radius.
+const aoTune = { radius: 0.25, intensity: 0.7 };
+
+function syncAO() {
+  if (!gtaoPass) return;
+  gtaoPass.blendIntensity = aoTune.intensity;
+  gtaoPass.updateGtaoMaterial({ radius: aoTune.radius });
+}
 
 function disposeComposer() {
   if (gtaoPass && gtaoPass.dispose) { try { gtaoPass.dispose(); } catch (e) {} }
@@ -1136,7 +1151,7 @@ function initThree() {
     syncStageFloor();
     if (playing && root.userData.animate) root.userData.animate(t);
     syncLabels();
-    if (composer) composer.render();
+    if (composer) { syncAO(); composer.render(); }
     else renderer.render(scene, camera);
   });
 }
