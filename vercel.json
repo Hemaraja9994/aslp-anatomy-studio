@@ -14,6 +14,15 @@
   ],
   "headers": [
     {
+      "source": "/(.*)",
+      "headers": [
+        {
+          "key": "Cache-Control",
+          "value": "public, max-age=300"
+        }
+      ]
+    },
+    {
       "source": "/anatomy/(.*)",
       "headers": [
         {
@@ -28,15 +37,6 @@
         {
           "key": "Cache-Control",
           "value": "public, max-age=604800"
-        }
-      ]
-    },
-    {
-      "source": "/(.*)",
-      "headers": [
-        {
-          "key": "Cache-Control",
-          "value": "public, max-age=300"
         }
       ]
     }
