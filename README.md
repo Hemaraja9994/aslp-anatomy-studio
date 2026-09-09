@@ -20,6 +20,14 @@ This is not Elsevier Complete Anatomy, not cadaver photogrammetry, not a surgica
 - Student notes in the browser and exportable logbook JSON
 - **Spatial** workspace (student toolbar): linked diagram + educational CT schematic + live 3D for M06–M08 (ear / middle ear / cochlea), with shared selection and Fit / Focus / Zoom tools
 
+## Studio sections
+
+Top tabs (kept alongside Student / Faculty):
+
+1. **RCI Core** — the 17 curriculum modules, study tools, and **Spatial** linked diagram / teaching CT / 3D (strongest on M06–M08).
+2. **Advanced Atlas** — open head & neck / ear resources with subsections (*Ear & temporal bone*, *Larynx & airway*, *Nose & sinuses*, *Pharynx / neck*). Cards link out to SPL Open Anatomy atlases, OpenEar (CC BY 4.0, Zenodo DOI), and MIDA (CC0). **No Netter / Elsevier assets.**
+3. **Pathology** — curated, de-identified teaching cases (otology, larynx/voice, nose/sinus, H&N oncology examples) with teaching points and open link-outs (e.g. Mass Eye & Ear otopathology resources, TCIA, OpenEar). Teaching only — not for diagnosis.
+
 ## How students use it
 
 1. Open a module. The first load downloads atlas meshes (a few megabytes).

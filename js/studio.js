@@ -8,6 +8,7 @@ import { Tissue } from "./tissue.js";
 import { explainPart } from "./glossary.js";
 import { emptyStudy, selectPart, hidePart, partDisplay, readViews, VIEW_STORAGE_KEY, MAX_VIEWS } from "./study-state.js";
 import { createSpatialController } from "./spatial.js";
+import { createSectionsController } from "./sections.js";
 
 window.THREE = THREE;
 
@@ -50,6 +51,7 @@ const clipBox = new THREE.Box3();
 const clipCorner = new THREE.Vector3();
 
 let spatial = null;
+let sections = null;
 
 function toast(msg) {
   els.toast.textContent = msg;
@@ -503,6 +505,9 @@ function bindStudyTools() {
 async function select(id, savedView = null) {
   closeDrawers();
   hideExplain();
+  if (sections && sections.getSection() !== "core") {
+    sections.setSection("core", { showHome: false });
+  }
   sceneReady = false;
   selected = null;
   study = emptyStudy();
@@ -976,7 +981,8 @@ function bindDrawers() {
     dockHome.onclick = () => {
       closeDrawers();
       hideExplain();
-      els.home.style.display = "block";
+      if (sections) sections.setSection(sections.getSection() || "core");
+      else els.home.style.display = "block";
       syncStudyTools();
     };
   }
@@ -1029,7 +1035,8 @@ function bind() {
   document.getElementById("btnHome").onclick = () => {
     closeDrawers();
     hideExplain();
-    els.home.style.display = "block";
+    if (sections) sections.setSection(sections.getSection() || "core");
+    else els.home.style.display = "block";
     syncStudyTools();
   };
   document.getElementById("btnReset").onclick = () => { resetIsolation(); select(current.id); };
@@ -1115,6 +1122,21 @@ function bind() {
     fitSpecimen: () => fitCamera(),
     focusSelected: () => focusSelection(),
     zoom3d: (factor) => zoomCamera(factor)
+  });
+  sections = createSectionsController({
+    openModule: (id) => {
+      if (spatial && spatial.isEnabled && spatial.isEnabled()) {
+        /* keep spatial if user already on; module load refreshes maps */
+      }
+      select(id);
+    },
+    onShowHome: () => {
+      hideExplain();
+      syncStudyTools();
+    },
+    onSectionChange: () => {
+      closeDrawers();
+    }
   });
 }
 

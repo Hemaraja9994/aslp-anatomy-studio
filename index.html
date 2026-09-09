@@ -11,7 +11,8 @@
   <link href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;600&family=Spectral:wght@400;600&display=swap" rel="stylesheet" />
   <link rel="stylesheet" href="./css/studio.css?v=contrib1" />
   <link rel="stylesheet" href="./css/study-tools.css?v=study1" />
-  <link rel="stylesheet" href="./css/spatial.css?v=spatial1" />
+  <link rel="stylesheet" href="./css/spatial.css?v=spatial2" />
+  <link rel="stylesheet" href="./css/sections.css?v=sections1" />
   <script type="importmap">
   {
     "imports": {
@@ -36,6 +37,11 @@
           <button class="btn active" id="btnStudent">Student</button>
           <button class="btn" id="btnFaculty">Faculty</button>
         </div>
+        <div class="section-switch" role="group" aria-label="Studio section">
+          <button class="btn active" type="button" data-studio-section="core" aria-pressed="true">Core</button>
+          <button class="btn" type="button" data-studio-section="advanced" aria-pressed="false">Advanced<span class="section-rest"> Atlas</span></button>
+          <button class="btn" type="button" data-studio-section="pathology" aria-pressed="false">Pathology</button>
+        </div>
         <button class="btn ghost" id="btnSheets">Print sheets</button>
         <button class="btn ghost" id="btnTweaks">Tweaks</button>
         <button class="btn ghost" id="btnHome">Curriculum home</button>
@@ -46,11 +52,13 @@
     <div class="layout">
       <aside class="rail" id="rail" aria-label="Curriculum modules">
         <div class="panel-head">
-          <h2>Modules</h2>
+          <h2 id="sectionRailHint">RCI Core modules</h2>
           <span class="count">17 · RCI 2024-25</span>
         </div>
         <input class="search" id="search" placeholder="Search module, paper, topic" />
         <div id="moduleList"></div>
+        <div id="advancedSubnav" class="section-rail" hidden aria-label="Advanced Atlas subsections"></div>
+        <div id="pathologySubnav" class="section-rail" hidden aria-label="Pathology subsections"></div>
       </aside>
       <section class="stage">
         <canvas id="view"></canvas>
@@ -120,16 +128,23 @@
           </div>
         </div>
         <div class="home" id="home">
-          <div class="hero">
-            <p class="eyebrow">Audiology &amp; Speech-Language Pathology — Anatomy Studio</p>
-            <h2>Photoreal dissection meshes for speech, hearing and swallowing.</h2>
-            <p>Wet muscle, bone, cartilage and mucosa shaders on BodyParts3D / Z-Anatomy reconstructions (CC BY-SA) — temporal bone, ossicles, cochlea, pinna, larynx, tongue, pharynx, language cortex and cranial nerves. Built for B.ASLP (RCI 2024-25) and postgraduate programmes.</p>
-            <div class="cta">
-              <button class="btn primary" id="openStudio">Enter temporal bone studio</button>
+          <div class="home-panel" id="homeCore">
+            <div class="hero">
+              <p class="eyebrow">RCI Core · Audiology &amp; Speech-Language Pathology</p>
+              <h2>Photoreal dissection meshes for speech, hearing and swallowing.</h2>
+              <p>Wet muscle, bone, cartilage and mucosa shaders on BodyParts3D / Z-Anatomy reconstructions (CC BY-SA) — temporal bone, ossicles, cochlea, pinna, larynx, tongue, pharynx, language cortex and cranial nerves. Built for B.ASLP (RCI 2024-25) and postgraduate programmes.</p>
+              <p>Use <b>Spatial</b> on M06–M08 for linked diagram + teaching CT + 3D. Switch top tabs to <b>Advanced Atlas</b> (open H&amp;N/ear resources) or <b>Pathology</b> (teaching cases).</p>
+              <div class="cta">
+                <button class="btn primary" id="openStudio">Enter temporal bone studio</button>
+                <button class="btn" type="button" data-studio-section="advanced">Browse Advanced Atlas</button>
+                <button class="btn" type="button" data-studio-section="pathology">Browse Pathology</button>
+              </div>
+              <div class="panel-head" style="margin-top:30px"><h2>17 curriculum modules</h2><span class="count">M00 – M16</span></div>
+              <div class="grid" id="homeGrid"></div>
             </div>
-            <div class="panel-head" style="margin-top:30px"><h2>17 curriculum modules</h2><span class="count">M00 – M16</span></div>
-            <div class="grid" id="homeGrid"></div>
           </div>
+          <div class="home-panel" id="homeAdvanced" hidden></div>
+          <div class="home-panel" id="homePathology" hidden></div>
         </div>
       </section>
       <aside class="side" id="sidePanel" aria-label="Layers and learning">
@@ -253,7 +268,7 @@
   <script src="./js/data.js"></script>
   <script src="./js/catalog.js"></script>
   <script src="./js/scenes.js"></script>
-  <script type="module" src="./js/studio.js?v=spatial1"></script>
+  <script type="module" src="./js/studio.js?v=sections1"></script>
   <script src="./js/faculty.js"></script>
   <script src="./js/tweaks.js"></script>
 </body>

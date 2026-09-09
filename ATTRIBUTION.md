@@ -29,3 +29,22 @@ reproduce Elsevier, 3D4Medical, BioDigital, or Zygote artwork.
 These models are educational reconstructions. They are not cadaver photographs,
 not a surgical navigator, and not a substitute for temporal-bone dissection,
 stroboscopy, or supervised clinical teaching.
+
+## Advanced Atlas (open link-outs)
+
+These are **not** bundled as Elsevier/Netter plate packs. The studio links to open educational resources:
+
+- **SPL Head & Neck Atlas** and **SPL Inner Ear Atlas** — Open Anatomy Project / Surgical Planning Lab (and DKFZ for inner ear). Viewer pages: https://www.openanatomy.org/atlas-pages/
+- **OpenEar** — temporal bone CT/3D teaching resource, **CC BY 4.0** — https://doi.org/10.5281/zenodo.1473724
+- **MIDA head–neck model** — multimodal imaging-based anatomical model, **CC0** via IT'IS / collaborators — https://itis.swiss/virtual-population/regional-human-models/mida-model (paper: https://doi.org/10.1371/journal.pone.0124126)
+
+## Pathology teaching cards
+
+Pathology entries are curated classroom patterns with optional link-outs. Prefer open, attributable sources:
+
+- Mass Eye and Ear Otopathology Laboratory educational resources — https://masseyeandear.org/otopathology-laboratory/resources
+- The Cancer Imaging Archive (TCIA) public collections — https://www.cancerimagingarchive.net/
+- OpenEar DOI above for temporal-bone CT teaching context
+
+Pathology cards are **not for diagnosis**, staging, or clinical decision-making. No commercial anatomy plate libraries are redistributed here.
+
