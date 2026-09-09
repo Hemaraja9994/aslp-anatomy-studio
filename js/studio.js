@@ -745,7 +745,7 @@ function syncLens() {
     zMax = dist * 4;
   }
   let near = Math.min(zMin, dist) * 0.2;
-  near = THREE.MathUtils.clamp(near, 0.0015, 0.6);
+  near = THREE.MathUtils.clamp(near, 0.01, 0.6);
   let far = Math.max(zMax * 1.6, dist + radius * 2.5, 12);
   // Keep the ratio inside a comfortable depth-buffer range by lifting far,
   // never by pushing near forward into the model.
@@ -758,8 +758,8 @@ function syncLens() {
   if (scene && scene.fog) {
     // Fog must start beyond the specimen and always end after it starts, or the
     // whole model renders as flat background colour.
-    const fogNear = Math.max(zMax * 1.15, dist + radius * 0.5, near * 4);
-    const fogFar = Math.max(fogNear * 1.6, fogNear + radius * 3, far);
+    const fogNear = Math.max(zMax * 2.4, dist + radius * 3, far * 0.72);
+    const fogFar = Math.max(fogNear * 1.8, fogNear + radius * 6, far);
     scene.fog.near = fogNear;
     scene.fog.far = fogFar;
     if (camera.far < fogFar) {
