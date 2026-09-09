@@ -1,6 +1,9 @@
 import * as THREE from "three";
 import { OrbitControls } from "three/addons/controls/OrbitControls.js";
 import { RoomEnvironment } from "three/addons/environments/RoomEnvironment.js";
+import { EffectComposer } from "three/addons/postprocessing/EffectComposer.js";
+import { SSAOPass } from "three/addons/postprocessing/SSAOPass.js";
+import { OutputPass } from "three/addons/postprocessing/OutputPass.js";
 import { StudioAtlas } from "./atlas.js";
 import { attachPhysiology } from "./physiology.js";
 import { attachClinic } from "./clinic.js";
@@ -37,6 +40,7 @@ const els = {
 
 let current = data.modules[6];
 let renderer, scene, camera, root, clock, controls, playing = true, raycaster, pointer;
+let composer, gtaoPass;
 let selected = null;
 let study = emptyStudy();
 let sceneReady = false;
@@ -699,6 +703,93 @@ function fitCamera() {
   }
 }
 
+// Ambient occlusion. Contact darkening in the creases is what separates a
+// stack of separate meshes from something that reads as one specimen, and no
+// amount of material tuning substitutes for it.
+function buildComposer() {
+  if (els.lite && els.lite.checked) { composer = null; gtaoPass = null; return; }
+  try {
+    const size = renderer.getSize(new THREE.Vector2());
+    const w = Math.max(1, size.x);
+    const h = Math.max(1, size.y);
+    // MSAA is lost the moment we render into a target, so ask for a
+    // multisampled one rather than shipping aliased edges.
+    const target = new THREE.WebGLRenderTarget(w, h, {
+      type: THREE.HalfFloatType,
+      samples: 4
+    });
+    composer = new EffectComposer(renderer, target);
+    composer.setPixelRatio(renderer.getPixelRatio());
+    composer.setSize(w, h);
+    // SSAOPass renders its own beauty pass, so it replaces RenderPass rather
+    // than following it.
+    gtaoPass = new SSAOPass(scene, camera, w, h);
+    gtaoPass.output = SSAOPass.OUTPUT.Default;
+    // World units: the specimen is normalised to ~3.4 across, so the sampling
+    // kernel has to stay well inside a single structure.
+    gtaoPass.kernelRadius = 0.14;
+    gtaoPass.minDistance = 0.002;
+    gtaoPass.maxDistance = 0.12;
+    composer.addPass(gtaoPass);
+    composer.addPass(new OutputPass());
+  } catch (err) {
+    console.warn("Ambient occlusion unavailable, falling back to direct render.", err);
+    composer = null;
+    gtaoPass = null;
+  }
+}
+
+// Exposed so the Tweaks panel (and support) can turn occlusion off on weak
+// hardware without a reload.
+window.StudioRender = {
+  aoActive: () => !!(composer && gtaoPass),
+  camState: () => {
+    if (!camera || !controls) return null;
+    const size = new THREE.Vector3();
+    if (!clipBox.isEmpty()) clipBox.getSize(size);
+    return {
+      near: camera.near, far: camera.far, aspect: camera.aspect,
+      dist: camera.position.distanceTo(controls.target),
+      minD: controls.minDistance, maxD: controls.maxDistance,
+      clipEmpty: clipBox.isEmpty(), clipSize: size.toArray(),
+      fogNear: scene.fog ? scene.fog.near : null,
+      fogFar: scene.fog ? scene.fog.far : null,
+      named: (root.userData.named || []).length,
+      visible: (root.userData.named || []).filter((m) => m.visible).length
+    };
+  },
+  aoRadius: (v) => {
+    if (!gtaoPass) return null;
+    if (typeof v === "number") gtaoPass.kernelRadius = v;
+    return gtaoPass.kernelRadius;
+  },
+  // 0 = normal, 4 = raw AO buffer. For checking occlusion is really computing.
+  aoDebug: (n) => {
+    if (!gtaoPass) return null;
+    gtaoPass.output = n | 0;
+    return gtaoPass.output;
+  },
+  aoParams: (o) => {
+    if (!gtaoPass) return false;
+    Object.assign(gtaoPass, o);
+    return true;
+  },
+  setAO: (on) => {
+    if (on && !composer) buildComposer();
+    else if (!on && composer) disposeComposer();
+    return !!composer;
+  }
+};
+
+function disposeComposer() {
+  if (gtaoPass && gtaoPass.dispose) { try { gtaoPass.dispose(); } catch (e) {} }
+  if (composer && composer.renderTarget1) {
+    try { composer.renderTarget1.dispose(); composer.renderTarget2.dispose(); } catch (e) {}
+  }
+  composer = null;
+  gtaoPass = null;
+}
+
 // The lab table only helps when the whole specimen is in frame. Close up it is
 // just a grey wall behind the structure, which is what read as "clipped".
 function stageFloorWanted() {
@@ -744,6 +835,11 @@ function syncLens() {
     zMin = dist * 0.25;
     zMax = dist * 4;
   }
+  // Keep near as far out as the geometry allows. A 0.0015 floor gave a
+  // near/far ratio near 1:8000, and at that precision the depth buffer is flat
+  // enough that GTAO reconstructs neighbouring samples to the same position and
+  // finds no occlusion at all. controls.minDistance already stops the camera
+  // well short of 0.01.
   let near = Math.min(zMin, dist) * 0.2;
   near = THREE.MathUtils.clamp(near, 0.01, 0.6);
   let far = Math.max(zMax * 1.6, dist + radius * 2.5, 12);
@@ -972,6 +1068,8 @@ function initThree() {
   root = new THREE.Group();
   scene.add(root);
 
+  buildComposer();
+
   controls = new OrbitControls(camera, canvas);
   controls.enableDamping = true;
   controls.dampingFactor = 0.08;
@@ -1012,6 +1110,10 @@ function initThree() {
     camera.aspect = w / h;
     camera.updateProjectionMatrix();
     renderer.setSize(w, h, false);
+    if (composer) {
+      composer.setPixelRatio(renderer.getPixelRatio());
+      composer.setSize(w, h);
+    }
     // Re-fit after layout settles (mobile stack, dock, orientation, spatial toggle).
     if (root && root.userData && root.userData.named && root.userData.named.length) {
       clearTimeout(fitResizeTimer);
@@ -1034,7 +1136,8 @@ function initThree() {
     syncStageFloor();
     if (playing && root.userData.animate) root.userData.animate(t);
     syncLabels();
-    renderer.render(scene, camera);
+    if (composer) composer.render();
+    else renderer.render(scene, camera);
   });
 }
 
