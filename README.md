@@ -18,6 +18,7 @@ This is not Elsevier Complete Anatomy, not cadaver photogrammetry, not a surgica
 - Clinic overlays for devices and windows (toggle **Clinic overlay**)
 - UG and PG outcomes, worksheets, OSCE stations, viva frames
 - Student notes in the browser and exportable logbook JSON
+- **Spatial** workspace (student toolbar): linked diagram + educational CT schematic + live 3D for M06–M08 (ear / middle ear / cochlea), with shared selection and Fit / Focus / Zoom tools
 
 ## How students use it
 
@@ -26,6 +27,7 @@ This is not Elsevier Complete Anatomy, not cadaver photogrammetry, not a surgica
 3. Toggle **Photoreal** for teaching colours, **Clinic overlay** for devices, **Labels** for names on the mesh.
 4. Use **Right side / Left side** for paired organs.
 5. Workbook / OSCE / Exam panels sit on the right.
+6. Toggle **Spatial** for linked schematic diagram and teaching CT beside the same 3D canvas (strongest on M06–M08). CT panes are labelled as educational schematics — not real patient scans.
 
 On a phone or tablet the 3D stage stays full-screen. Use the bottom bar: **Modules**, **Home**, **Learn**. Type and spacing scale with the viewport; layer and part buttons are sized for touch.
 
