@@ -56,3 +56,11 @@ See [ATTRIBUTION.md](./ATTRIBUTION.md). Geometry is streamed from the Anatria3D 
 ## Deploy
 
 Static files. Vercel / Cloudflare: no build command, output `.`
+
+## Hearing and device lessons
+
+- `/hearing/`: staged sound transmission from outer ear to brain.
+- `/hearing-aids/`: BTE, RIC, ITE, ITC and CIC placement schematics, use and acoustic amplification pathway.
+- `/cochlear-implant/`: external/internal components, electrode schematic and electrical stimulation pathway.
+
+Shared presentation and controls live in `css/hearing.css` and `js/hearing.js`. Lessons include manual stage selection, play/pause/reset, knowledge checks, source links, keyboard controls, responsive layouts and reduced-motion support. Diagrams are original conceptual SVGs, not anatomical or surgical models. No build or additional dependencies are required.
