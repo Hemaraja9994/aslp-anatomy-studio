@@ -1,0 +1,87 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Pinna to Cortex</title>
+<meta name="description" content="Follow one sound in 3D from the auricle, ear canal, eardrum and ossicles into the cochlea, then up the auditory nerve and brainstem to Heschl's gyrus. Normal hearing and conductive, cochlear and retrocochlear pathology.">
+<meta name="theme-color" content="#06090f">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Instrument+Sans:wght@400;500;600&family=Instrument+Serif:ital@0;1&family=JetBrains+Mono:wght@400;500&display=swap">
+<link rel="stylesheet" href="./hearing.css?v=1">
+<script type="importmap">
+{ "imports": {
+  "three": "https://unpkg.com/three@0.160.0/build/three.module.js",
+  "three/addons/": "https://unpkg.com/three@0.160.0/examples/jsm/"
+} }
+</script>
+</head>
+<body>
+<div class="app">
+  <div id="stage" class="stage" aria-label="3D model of the auditory pathway. Drag to orbit, scroll or pinch to zoom.">
+    <div id="loader" class="loader">
+      <div class="loader-ring"></div>
+      <p id="loadMsg">Loading anatomy…</p>
+    </div>
+    <div class="hint" id="hint">Drag to orbit · scroll or pinch to zoom · right-drag to pan</div>
+  </div>
+
+  <header class="brand">
+    <a class="back" href="../">ASLP Anatomy Studio</a>&ensp;<a class="back" href="../hearing/">Hearing lessons</a>
+    <h1>Pinna to Cortex</h1>
+    <p>One sound, followed in 3D from the air to Heschl's gyrus</p>
+  </header>
+
+  <nav class="chapters" id="chapters" aria-label="Chapters"></nav>
+
+  <aside class="side">
+    <article class="card" id="card" aria-live="polite"></article>
+
+    <section class="panel clinic" id="clinic">
+      <div class="panel-head">
+        <h3>Signal along the pathway</h3>
+        <span class="chip-note" id="stimNote"></span>
+      </div>
+      <div class="ladder" id="ladder"></div>
+      <div class="panel-head">
+        <h3>ABR</h3>
+        <span class="chip-note" id="abrNote"></span>
+      </div>
+      <canvas id="abr" aria-label="Auditory brainstem response waveform"></canvas>
+      <div class="panel-head"><h3>Expected test battery</h3></div>
+      <dl class="battery" id="battery"></dl>
+      <p class="credit">Anatomy: Z-Anatomy / BodyParts3D meshes (CC BY-SA 4.0). Physiology values are teaching approximations (Greenwood 1990; Shaw 1974; Ruggero et al. 1997; Hall 2007). Concept and design: Hemaraja Nayaka S.</p>
+    </section>
+  </aside>
+
+  <div class="dock" id="dock">
+    <div class="dock-row">
+      <button class="btn icon" id="prev" type="button" aria-label="Previous chapter">‹</button>
+      <button class="btn primary" id="play" type="button">Pause</button>
+      <button class="btn icon" id="next" type="button" aria-label="Next chapter">›</button>
+      <button class="btn ghost" id="tour" type="button" aria-pressed="false">Guided tour</button>
+    </div>
+    <div class="dock-row">
+      <div class="seg" id="stim" role="group" aria-label="Stimulus"></div>
+    </div>
+    <div class="dock-row wrap">
+      <label class="field grow" for="level"><span>Level</span>
+        <input type="range" id="level" min="40" max="100" step="5" value="70">
+        <output id="levelOut">70 dB SPL</output>
+      </label>
+      <label class="field grow" for="cond"><span>Ear</span>
+        <select id="cond"></select>
+      </label>
+    </div>
+    <div class="dock-row wrap toggles">
+      <label class="tg"><input type="checkbox" id="labels" checked> Labels</label>
+      <label class="tg"><input type="checkbox" id="glow" checked> Glow</label>
+      <label class="tg" for="speed">Speed
+        <input type="range" id="speed" min="0.25" max="2" step="0.25" value="1"></label>
+    </div>
+  </div>
+</div>
+<script type="module" src="./js/app.js?v=1"></script>
+</body>
+</html>

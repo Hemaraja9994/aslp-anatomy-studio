@@ -28,6 +28,10 @@ Top tabs (kept alongside Student / Faculty):
 2. **Advanced Atlas** — open head & neck / ear resources with subsections (*Ear & temporal bone*, *Larynx & airway*, *Nose & sinuses*, *Pharynx / neck*). Cards link out to SPL Open Anatomy atlases, OpenEar (CC BY 4.0, Zenodo DOI), and MIDA (CC0). **No Netter / Elsevier assets.**
 3. **Pathology** — curated, de-identified teaching cases (otology, larynx/voice, nose/sinus, H&N oncology examples) with teaching points and open link-outs (e.g. Mass Eye & Ear otopathology resources, TCIA, OpenEar). Teaching only — not for diagnosis.
 
+## Pinna to Cortex (`/hearing-3d/`)
+
+3D journey of one sound through the auditory system on real Z-Anatomy meshes (`hearing-3d/ear.glb`, extracted from the studio's GLBs): sound source and wavefronts, auricle and concha, ear-canal resonance (pressure particles), eardrum and ossicular chain motion, acoustic reflex arc, magnified cochlear spiral with travelling wave, organ of Corti with OHC motility and K⁺ influx, then spikes through the VIII nerve, CN, SOC, LL, IC, MGB to Heschl's gyrus, synchronised with the ABR. Stimuli 250 Hz–8 kHz and click, 40–100 dB SPL. Conditions: impacted wax, TM perforation, OME, otosclerosis, presbycusis, NIHL, dead region, vestibular schwannoma, each with the expected test battery. Ten guided chapters; works on phones.
+
 ## Travelling Wave Lab (`/cochlea/`)
 
 Standalone interactive cochlear mechanics model: uncoiled basilar membrane with Greenwood place map, organ of Corti cross-section, IHC receptor potential and auditory nerve spikes, excitation patterns and BM input–output function. Stimuli: pure tone, click, tone burst, two-tone (DPOAE 2f1–f2, upward spread of masking), speech (/a/, /i/, /u/, /s/). Cochlear status: normal, presbycusis, NIHL 4 kHz notch, dead region. Single self-contained HTML file; works on phones.
