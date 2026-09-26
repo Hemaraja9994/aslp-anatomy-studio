@@ -32,6 +32,10 @@ Top tabs (kept alongside Student / Faculty):
 
 3D journey of one sound through the auditory system on real Z-Anatomy meshes (`hearing-3d/ear.glb`, extracted from the studio's GLBs): sound source and wavefronts, auricle and concha, ear-canal resonance (pressure particles), eardrum and ossicular chain motion, acoustic reflex arc, magnified cochlear spiral with travelling wave, organ of Corti with OHC motility and K⁺ influx, then spikes through the VIII nerve, CN, SOC, LL, IC, MGB to Heschl's gyrus, synchronised with the ABR. Stimuli 250 Hz–8 kHz and click, 40–100 dB SPL. Conditions: impacted wax, TM perforation, OME, otosclerosis, presbycusis, NIHL, dead region, vestibular schwannoma, each with the expected test battery. Ten guided chapters; works on phones.
 
+## Devices in 3D (`/devices-3d/`)
+
+Hearing devices on the same 3D anatomy: BTE (hook, tubing, earmould), RIC (wire, receiver, open dome), custom ITE / ITC / CIC / IIC at their canal depths, bone-conduction device (percutaneous or transcutaneous, vibration to both cochleae), active middle-ear implant (FMT on the incus), cochlear implant (processor, coil, receiver–stimulator, lead to the round window, 12-contact array in scala tympani with interleaved pulses and place mismatch) and auditory brainstem implant (paddle on the cochlear nucleus). Each device shows its signal chain and processing (WDRC input–output or channel-to-electrode mapping). Fourteen diagnoses map to first choice / suitable / consider / not indicated for every device, and the nerve activity reflects how well the route suits that ear. Teaching summary, not a fitting or candidacy protocol.
+
 ## Travelling Wave Lab (`/cochlea/`)
 
 Standalone interactive cochlear mechanics model: uncoiled basilar membrane with Greenwood place map, organ of Corti cross-section, IHC receptor potential and auditory nerve spikes, excitation patterns and BM input–output function. Stimuli: pure tone, click, tone burst, two-tone (DPOAE 2f1–f2, upward spread of masking), speech (/a/, /i/, /u/, /s/). Cochlear status: normal, presbycusis, NIHL 4 kHz notch, dead region. Single self-contained HTML file; works on phones.

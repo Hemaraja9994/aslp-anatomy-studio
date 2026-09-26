@@ -1,0 +1,86 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Devices in 3D</title>
+<meta name="description" content="How hearing aids (BTE, RIC, ITE, ITC, CIC, IIC), bone-conduction devices, middle-ear implants, cochlear implants and auditory brainstem implants work, shown on a 3D model of the ear and auditory pathway, with condition-to-device candidacy guidance.">
+<meta name="theme-color" content="#06090f">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Instrument+Sans:wght@400;500;600&family=Instrument+Serif:ital@0;1&family=JetBrains+Mono:wght@400;500&display=swap">
+<link rel="stylesheet" href="../hearing-3d/hearing.css?v=2">
+<link rel="stylesheet" href="./devices.css?v=1">
+<script type="importmap">
+{ "imports": {
+  "three": "https://unpkg.com/three@0.160.0/build/three.module.js",
+  "three/addons/": "https://unpkg.com/three@0.160.0/examples/jsm/"
+} }
+</script>
+</head>
+<body>
+<div class="app">
+  <div id="stage" class="stage" aria-label="3D model of the ear with hearing devices. Drag to orbit, scroll or pinch to zoom.">
+    <div id="loader" class="loader">
+      <div class="loader-ring"></div>
+      <p id="loadMsg">Loading anatomy…</p>
+    </div>
+    <div class="hint" id="hint">Drag to orbit · scroll or pinch to zoom · right-drag to pan</div>
+  </div>
+
+  <header class="brand">
+    <a class="back" href="../">ASLP Anatomy Studio</a>&ensp;<a class="back" href="../hearing-3d/">3D journey</a>&ensp;<a class="back" href="../hearing/">Hearing lessons</a>
+    <h1>Devices in 3D</h1>
+    <p>Hearing aids, bone conduction, middle-ear, cochlear and brainstem implants</p>
+  </header>
+
+  <nav class="chapters" id="chapters" aria-label="Devices"></nav>
+
+  <aside class="side">
+    <article class="card" id="card" aria-live="polite"></article>
+
+    <section class="panel">
+      <div class="panel-head"><h3>Signal chain</h3><span class="chip-note" id="chainNote"></span></div>
+      <ol class="chain" id="chain"></ol>
+      <div class="panel-head"><h3 id="procTitle">Processing</h3><span class="chip-note" id="procNote"></span></div>
+      <canvas id="proc" aria-label="Device processing graph"></canvas>
+    </section>
+
+    <section class="panel">
+      <div class="panel-head"><h3>Candidacy for this ear</h3><span class="chip-note" id="candNote"></span></div>
+      <p class="cand-why" id="candWhy"></p>
+      <ul class="cand" id="cand"></ul>
+      <p class="credit">Candidacy notes are a teaching summary, not a fitting or surgical protocol. Always follow current national and manufacturer criteria. Anatomy: Z-Anatomy / BodyParts3D (CC BY-SA 4.0). Devices are generic schematics, not specific products. Concept and design: Hemaraja Nayaka S.</p>
+    </section>
+  </aside>
+
+  <div class="dock" id="dock">
+    <div class="dock-row">
+      <button class="btn icon" id="prev" type="button" aria-label="Previous device">‹</button>
+      <button class="btn primary" id="play" type="button">Pause</button>
+      <button class="btn icon" id="next" type="button" aria-label="Next device">›</button>
+      <button class="btn ghost" id="tour" type="button" aria-pressed="false">Guided tour</button>
+    </div>
+    <div class="dock-row">
+      <div class="seg" id="stim" role="group" aria-label="Stimulus frequency"></div>
+    </div>
+    <div class="dock-row wrap">
+      <label class="field grow" for="level"><span>Level</span>
+        <input type="range" id="level" min="30" max="100" step="5" value="65">
+        <output id="levelOut">65 dB SPL</output>
+      </label>
+      <label class="field grow" for="cond"><span>Ear</span>
+        <select id="cond"></select>
+      </label>
+    </div>
+    <div class="dock-row wrap toggles">
+      <label class="tg"><input type="checkbox" id="labels" checked> Labels</label>
+      <label class="tg"><input type="checkbox" id="glow" checked> Glow</label>
+      <label class="tg" for="speed">Speed
+        <input type="range" id="speed" min="0.25" max="2" step="0.25" value="1"></label>
+    </div>
+  </div>
+</div>
+<script type="module" src="./js/devices.js?v=1"></script>
+</body>
+</html>
