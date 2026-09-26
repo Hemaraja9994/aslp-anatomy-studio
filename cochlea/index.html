@@ -1,0 +1,781 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="description" content="Travelling Wave Lab: interactive model of cochlear mechanics (travelling wave, OHC amplifier, IHC transduction, pathology) for audiology and otology teaching.">
+<meta name="theme-color" content="#0A7680">
+<title>Travelling Wave Lab</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&family=Literata:opsz,wght@7..72,500;7..72,650&display=swap">
+<style>
+:root{
+  --bg:#EDF1F0; --panel:#F8FAF9; --ink:#13232A; --muted:#566870; --line:#CAD5D5; --faint:#E1E8E7;
+  --accent:#0A7680; --accent-soft:rgba(10,118,128,.16);
+  --ohc:#C27C12; --ihc:#6D47BD; --nerve:#C2334F; --ion:#1F8A4C; --warn:#B4471F;
+  --bone:#D9D2C3; --tissue:#F2E6DC; --endo:#E3F0EE; --peri:#E8EEF4;
+  --serif:"Literata",Georgia,"Times New Roman",serif;
+  --sans:"IBM Plex Sans",system-ui,-apple-system,"Segoe UI",sans-serif;
+  --mono:"IBM Plex Mono",ui-monospace,Menlo,Consolas,monospace;
+}
+@media (prefers-color-scheme:dark){
+  :root:not([data-theme="light"]){
+    color-scheme:dark;
+    --bg:#0C1417; --panel:#131F23; --ink:#E1EAEB; --muted:#91A4A9; --line:#25363C; --faint:#1A292E;
+    --accent:#3CC0C9; --accent-soft:rgba(60,192,201,.18);
+    --ohc:#EFAC44; --ihc:#A988EE; --nerve:#F06884; --ion:#4FCB84; --warn:#F08A5D;
+    --bone:#3A3A33; --tissue:#2E2723; --endo:#132A2B; --peri:#152029;
+  }
+}
+:root[data-theme="dark"]{
+  color-scheme:dark;
+  --bg:#0C1417; --panel:#131F23; --ink:#E1EAEB; --muted:#91A4A9; --line:#25363C; --faint:#1A292E;
+  --accent:#3CC0C9; --accent-soft:rgba(60,192,201,.18);
+  --ohc:#EFAC44; --ihc:#A988EE; --nerve:#F06884; --ion:#4FCB84; --warn:#F08A5D;
+  --bone:#3A3A33; --tissue:#2E2723; --endo:#132A2B; --peri:#152029;
+}
+*{box-sizing:border-box}
+[hidden]{display:none!important}
+html{-webkit-text-size-adjust:100%}
+.ctl>label.chk{font-family:var(--sans);font-size:13.5px;letter-spacing:0;text-transform:none;color:var(--ink);justify-content:flex-start}
+body{background:var(--bg);color:var(--ink);font-family:var(--sans);font-size:15px;line-height:1.55;padding-inline:20px;padding-block:24px 48px}
+.wrap{max-width:1320px;margin:0 auto;display:flex;flex-direction:column;gap:20px}
+header{display:flex;flex-wrap:wrap;align-items:end;justify-content:space-between;gap:12px 24px;border-bottom:1px solid var(--line);padding-bottom:14px}
+h1{font-family:var(--serif);font-weight:650;font-size:clamp(26px,3.4vw,36px);line-height:1.1;margin:0;letter-spacing:-.01em;text-wrap:balance}
+.sub{color:var(--muted);margin:6px 0 0;max-width:68ch}
+.eyebrow{font-family:var(--mono);font-size:11.5px;letter-spacing:.08em;text-transform:uppercase;color:var(--accent)}
+.layout{display:grid;grid-template-columns:290px minmax(0,1fr);gap:20px;align-items:start}
+@media (max-width:900px){.layout{grid-template-columns:1fr}}
+aside{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:16px;display:flex;flex-direction:column;gap:18px;position:sticky;top:calc(env(safe-area-inset-top,0px) + 12px)}
+@media (max-width:900px){aside{position:static}}
+.ctl{display:flex;flex-direction:column;gap:7px}
+.ctl>label,.ctl>.lbl{font-size:11.5px;font-family:var(--mono);letter-spacing:.07em;text-transform:uppercase;color:var(--muted);display:flex;justify-content:space-between;gap:8px}
+.ctl output{color:var(--ink);font-variant-numeric:tabular-nums;text-transform:none;letter-spacing:0;font-size:13px}
+.seg{display:flex;flex-wrap:wrap;gap:6px}
+.seg button{font:inherit;font-size:13px;padding:6px 10px;border-radius:6px;border:1px solid var(--line);background:transparent;color:var(--ink);cursor:pointer}
+.seg button[aria-pressed="true"]{background:var(--accent);border-color:var(--accent);color:var(--panel);font-weight:600}
+.seg button:hover{border-color:var(--accent)}
+select{font:inherit;font-size:14px;padding:7px 8px;border-radius:6px;border:1px solid var(--line);background:var(--bg);color:var(--ink);width:100%}
+input[type=range]{width:100%;accent-color:var(--accent)}
+.ticks{display:flex;justify-content:space-between;font-family:var(--mono);font-size:10.5px;color:var(--muted);margin-top:-4px}
+.row{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.btn{font:inherit;font-size:13.5px;font-weight:600;padding:8px 14px;border-radius:6px;border:1px solid var(--accent);background:var(--accent);color:var(--panel);cursor:pointer}
+.btn.ghost{background:transparent;color:var(--accent)}
+.chk{display:flex;gap:8px;align-items:center;font-size:13.5px;cursor:pointer}
+.hint{font-size:12.5px;color:var(--muted);margin:0}
+button:focus-visible,select:focus-visible,input:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+main{display:flex;flex-direction:column;gap:20px;min-width:0}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:14px 16px 12px;min-width:0}
+.card h2{font-family:var(--serif);font-weight:500;font-size:18px;margin:0 0 2px}
+.card .cap{font-size:12.5px;color:var(--muted);margin:0 0 8px}
+canvas{display:block;width:100%;touch-action:none}
+#bm{height:300px;cursor:crosshair}
+#xs{height:320px} #tr{height:320px}
+#ex{height:250px} #io{height:250px}
+.two{display:grid;grid-template-columns:minmax(0,1.15fr) minmax(0,1fr);gap:20px}
+.two.b{grid-template-columns:minmax(0,1.5fr) minmax(0,1fr)}
+@media (max-width:1100px){.two,.two.b{grid-template-columns:1fr}}
+@media (max-width:600px){body{padding-inline:12px;font-size:14.5px}#bm{height:250px}#xs{height:290px}#tr{height:270px}#ex{height:220px}#io{height:220px}.card{padding:12px}.chips{grid-template-columns:repeat(2,minmax(0,1fr))}.seg button{padding:8px 10px}header .row{width:100%}header .btn{flex:1}}
+.chips{display:grid;grid-template-columns:repeat(auto-fill,minmax(170px,1fr));gap:10px}
+.chip{border:1px solid var(--line);border-radius:8px;padding:8px 10px;background:var(--bg)}
+.chip .k{font-family:var(--mono);font-size:10.5px;letter-spacing:.07em;text-transform:uppercase;color:var(--muted)}
+.chip .v{font-family:var(--mono);font-size:15px;font-variant-numeric:tabular-nums}
+.chip.good .v{color:var(--ion)} .chip.bad .v{color:var(--warn)}
+.explain{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:20px}
+@media (max-width:800px){.explain{grid-template-columns:1fr}}
+.explain h3{font-family:var(--mono);font-size:11.5px;letter-spacing:.08em;text-transform:uppercase;color:var(--accent);margin:0 0 6px;font-weight:500}
+.explain p{margin:0 0 10px;max-width:68ch}
+.explain ul{margin:0;padding-left:18px} .explain li{margin-bottom:6px}
+.legend{display:flex;flex-wrap:wrap;gap:6px 16px;font-size:12.5px;color:var(--muted);margin-top:6px}
+.legend i{display:inline-block;width:14px;height:3px;border-radius:2px;vertical-align:middle;margin-right:6px}
+footer{font-size:12.5px;color:var(--muted);border-top:1px solid var(--line);padding-top:12px}
+footer p{margin:0 0 6px;max-width:110ch}
+</style>
+</head>
+<body>
+
+<div class="wrap">
+<header>
+  <div>
+    <div class="eyebrow">Cochlear mechanics · interactive model</div>
+    <h1>Travelling Wave Lab</h1>
+    <p class="sub">Basilar membrane motion, the outer hair cell amplifier and inner hair cell transduction for tones, clicks, tone bursts, two-tone pairs and speech, in normal and damaged cochleae. Time is slowed so you can follow each cycle.</p>
+  </div>
+  <div class="row">
+    <button class="btn" id="play" type="button">Pause</button>
+    <button class="btn ghost" id="reset" type="button">Reset</button>
+  </div>
+</header>
+
+<div class="layout">
+<aside aria-label="Controls">
+  <div class="ctl">
+    <span class="lbl">Stimulus</span>
+    <div class="seg" id="stimSeg" role="group" aria-label="Stimulus">
+      <button type="button" data-v="tone" aria-pressed="true">Pure tone</button>
+      <button type="button" data-v="click" aria-pressed="false">Click</button>
+      <button type="button" data-v="burst" aria-pressed="false">Tone burst</button>
+      <button type="button" data-v="two" aria-pressed="false">Two-tone</button>
+      <button type="button" data-v="speech" aria-pressed="false">Speech</button>
+    </div>
+  </div>
+
+  <div class="ctl" id="ttBox" hidden>
+    <span class="lbl">Two-tone paradigm</span>
+    <div class="seg" id="ttSeg" role="group" aria-label="Two-tone paradigm">
+      <button type="button" data-v="dpoae" aria-pressed="true">DPOAE 2f1–f2</button>
+      <button type="button" data-v="mask" aria-pressed="false">Upward masking</button>
+    </div>
+  </div>
+
+  <div class="ctl" id="vowelBox" hidden>
+    <label for="vowel">Speech sound</label>
+    <select id="vowel">
+      <option value="a">Vowel /a/ (F1 730, F2 1090 Hz)</option>
+      <option value="i">Vowel /i/ (F1 270, F2 2290 Hz)</option>
+      <option value="u">Vowel /u/ (F1 300, F2 870 Hz)</option>
+      <option value="s">Fricative /s/ (4–9 kHz)</option>
+    </select>
+  </div>
+
+  <div class="ctl" id="freqBox">
+    <label for="freq"><span id="freqLbl">Frequency</span><output id="freqOut">1000 Hz</output></label>
+    <input type="range" id="freq" min="0" max="10" step="1" value="4">
+    <div class="ticks"><span>125</span><span>500</span><span>1k</span><span>2k</span><span>4k</span><span>8k</span></div>
+  </div>
+
+  <div class="ctl">
+    <label for="level"><span id="levelLbl">Level</span><output id="levelOut">60 dB SPL</output></label>
+    <input type="range" id="level" min="0" max="100" step="5" value="60">
+  </div>
+
+  <div class="ctl">
+    <label for="path">Cochlear status</label>
+    <select id="path">
+      <option value="normal">Normal cochlea</option>
+      <option value="presby">Sloping HF OHC loss (presbycusis)</option>
+      <option value="nihl">Noise-induced OHC loss (4 kHz notch)</option>
+      <option value="dead">Dead region, CF 3–10 kHz</option>
+    </select>
+  </div>
+
+  <div class="ctl">
+    <span class="lbl">Probe place</span>
+    <label class="chk"><input type="checkbox" id="follow" checked> Follow the response peak</label>
+    <p class="hint">Click or drag on the basilar membrane to place the probe anywhere. The cross-section and traces show that place.</p>
+  </div>
+
+  <div class="ctl">
+    <label for="speed">Playback speed<output id="speedOut">1.0×</output></label>
+    <input type="range" id="speed" min="0.25" max="2" step="0.25" value="1">
+  </div>
+  <label class="chk"><input type="checkbox" id="labels" checked> Show anatomical labels</label>
+</aside>
+
+<main>
+  <section class="card">
+    <h2>Uncoiled cochlea: basilar membrane displacement</h2>
+    <p class="cap">Base (stapes) on the left, apex (helicotrema) on the right. Human place–frequency map (Greenwood, 1990), 35 mm length. Dashed lines show the travelling-wave envelope.</p>
+    <canvas id="bm" aria-label="Animated basilar membrane displacement from base to apex"></canvas>
+    <div class="legend">
+      <span><i style="background:var(--accent)"></i>BM displacement</span>
+      <span><i style="background:var(--muted)"></i>Envelope</span>
+      <span><i style="background:var(--ohc)"></i>OHC health along the cochlea</span>
+      <span><i style="background:var(--ihc)"></i>Probe place</span>
+    </div>
+  </section>
+
+  <div class="two">
+    <section class="card">
+      <h2>Organ of Corti at the probe place</h2>
+      <p class="cap" id="xsCap">Radial cross-section. BM up (toward scala vestibuli) deflects stereocilia toward the tallest row and opens transduction channels.</p>
+      <canvas id="xs" aria-label="Animated organ of Corti cross-section"></canvas>
+    </section>
+    <section class="card">
+      <h2>Transduction at the probe place</h2>
+      <p class="cap">Slowed time, most recent on the right.</p>
+      <canvas id="tr" aria-label="Traces of BM displacement, IHC receptor potential and auditory nerve spikes"></canvas>
+    </section>
+  </div>
+
+  <div class="two b">
+    <section class="card">
+      <h2>Excitation pattern</h2>
+      <p class="cap">Peak BM response (dB, model units) at every place. The dotted line is the level needed to drive the auditory nerve.</p>
+      <canvas id="ex" aria-label="Excitation pattern across cochlear place"></canvas>
+      <div class="legend" id="exLegend"></div>
+    </section>
+    <section class="card">
+      <h2>Input–output at probe CF</h2>
+      <p class="cap">BM response to a tone at the probe's characteristic frequency.</p>
+      <canvas id="io" aria-label="Basilar membrane input-output function"></canvas>
+    </section>
+  </div>
+
+  <section class="card">
+    <div class="chips" id="chips"></div>
+  </section>
+
+  <section class="card explain">
+    <div><h3>What you are seeing</h3><div id="explainA"></div></div>
+    <div><h3>Clinical correlates</h3><div id="explainB"></div></div>
+  </section>
+
+  <footer>
+    <p><a href="../" style="color:var(--accent)">← ASLP Anatomy Studio</a> · Concept and design: Hemaraja Nayaka S, Audiology and Speech-Language Pathology, Yenepoya Medical College Hospital, Mangaluru.</p>
+    <p><strong>Model notes.</strong> This is a teaching model with realistic proportions, not a hydrodynamic simulation. Place map: Greenwood (1990), f = 165.4(10<sup>0.06x</sup> − 0.88). OHC gain up to about 60 dB at mid–high CFs and about 35 dB near the apex, with about 0.2 dB/dB BM compression from 30 to 100 dB SPL (Ruggero et al., 1997). Loss of the active tip moves the passive peak about half an octave basally. IHC AC/DC ratio falls above about 1 kHz (Palmer &amp; Russell, 1986). Phase locking weakens above about 2 kHz and is negligible by about 5 kHz. DPOAE settings are f2/f1 = 1.22 and L1 = L2 + 10 dB (Kummer et al., 1998). The dead-region concept and TEN(HL) test follow Moore (2004). Real OAE levels and travel times vary between individuals.</p>
+  </footer>
+</main>
+</div>
+
+<script>
+(function(){
+"use strict";
+const FREQS=[125,250,500,750,1000,1500,2000,3000,4000,6000,8000];
+const LEN=35, N=340, OTH=21;
+const S={stim:"tone",fi:4,L:60,tt:"dpoae",vowel:"a",path:"normal",follow:true,probeD:null,playing:true,speed:1,labels:true};
+const reduce=window.matchMedia&&matchMedia("(prefers-reduced-motion: reduce)").matches;
+if(reduce) S.playing=false;
+
+const clamp=(x,a,b)=>Math.max(a,Math.min(b,x));
+const cfAt=d=>165.4*(Math.pow(10,0.06*(LEN-d))-0.88);
+const placeOf=f=>clamp(LEN-Math.log10(f/165.4+0.88)/0.06,0,LEN);
+const D=new Float32Array(N), CF=new Float32Array(N);
+for(let i=0;i<N;i++){D[i]=i/(N-1)*LEN;CF[i]=cfAt(D[i]);}
+const idxOf=d=>clamp(Math.round(d/LEN*(N-1)),0,N-1);
+const fmtF=f=>f>=1000?(Math.round(f/100)/10)+" kHz":Math.round(f)+" Hz";
+
+function gmax(c){const t=clamp(Math.log2(c/250)/2,0,1);return 35+25*t;}
+function health(c,path){
+  path=path||S.path;
+  if(path==="presby"){const t=clamp(Math.log2(c/1000)/2.5,0,1);return 1-t*t*(3-2*t);}
+  if(path==="nihl"){const z=Math.log2(c/4000)/0.55;return 1-0.92*Math.exp(-z*z);}
+  if(path==="dead"){ if(c>=3000&&c<=10000) return 0; const z=c<3000?Math.log2(3000/c)/0.5:Math.log2(c/10000)/0.5; return 1-Math.exp(-z*z);}
+  return 1;
+}
+function ihcAlive(c,path){path=path||S.path;return !(path==="dead"&&c>=3000&&c<=10000);}
+function passive(r){return r<-0.5? -30-(-0.5-r)*8 : -30-(r+0.5)*(r+0.5)*55;}
+function tip(r,sc){const s=(r<0?0.22:0.12)*sc;return Math.exp(-(r*r)/(s*s));}
+function effGain(c,L,h){return Math.max(0,gmax(c)*h-0.8*Math.max(0,L-30));}
+function bmOut(f,L,c,h,sc){const r=Math.log2(f/c);return L+passive(r)+effGain(c,L,h)*tip(r,sc||1);}
+function disp(O){return Math.tanh(1.3*Math.pow(10,(O-65)/30));}
+function phaseOf(f,c){const r=Math.log2(f/c);return -2*Math.PI*2.5*Math.pow(2,1.3*Math.min(r,0.3));}
+function latencyVis(d){return 0.12+2.3*Math.pow(d/LEN,2.1);}
+function latencyMs(d){return 0.4+8*Math.pow(d/LEN,2);}
+
+// ---------- model ----------
+let M=null;
+function vowelComps(v,L){
+  const comps=[];
+  if(v==="s"){
+    for(let k=0;k<30;k++){const f=3000*Math.pow(10000/3000,k/29);const db=-Math.pow(Math.log2(f/6000),2)*12;comps.push({f,db});}
+  }else{
+    const F={a:[730,1090,2440],i:[270,2290,3010],u:[300,870,2240]}[v], B=[80,100,120], F0=120;
+    for(let n=1;n*F0<=5000;n++){const f=n*F0;let db=-6*Math.log2(f/F0);
+      for(let j=0;j<3;j++){const Fj=F[j];db+=20*Math.log10(Fj*Fj/Math.sqrt(Math.pow(Fj*Fj-f*f,2)+Math.pow(B[j]*f,2)));}
+      comps.push({f,db});}
+  }
+  let tot=0;comps.forEach(c=>tot+=Math.pow(10,c.db/10));tot=10*Math.log10(tot);
+  const shift=(v==="s"?L-3:L)-tot;comps.forEach(c=>c.L=c.db+shift);
+  return comps;
+}
+function buildComps(path){
+  const f=FREQS[S.fi], L=S.L;
+  if(S.stim==="tone"||S.stim==="burst") return [{f,L,role:"tone"}];
+  if(S.stim==="two"){
+    if(S.tt==="dpoae"){
+      const f2=f,f1=f2/1.22,fdp=2*f1-f2,L1=L,L2=L-10;
+      const h2=health(f2,path);
+      const Ldp=L2-32+20*Math.log10(Math.max(h2,0.003));
+      return [{f:f1,L:L1,role:"f1"},{f:f2,L:L2,role:"f2"},{f:fdp,L:Ldp,role:"dp",from:placeOf(f2)}];
+    }
+    return [{f:f/2,L,role:"masker"},{f,L:40,role:"probe"}];
+  }
+  if(S.stim==="speech") return vowelComps(S.vowel,L).map(c=>({f:c.f,L:c.L,role:"h"}));
+  return [];
+}
+function patternFor(comps,path,sc){
+  const O=comps.map(c=>{const a=new Float32Array(N);for(let i=0;i<N;i++){
+    let o=bmOut(c.f,c.L,CF[i],health(CF[i],path),sc);
+    if(c.role==="dp"&&D[i]<c.from-1.2)o=-200;
+    a[i]=o;}return a;});
+  const E=new Float32Array(N);
+  for(let i=0;i<N;i++){let s=0;for(const o of O)s+=Math.pow(10,o[i]/10);E[i]=s>0?10*Math.log10(s):-200;}
+  return {O,E};
+}
+function clickPattern(path){
+  const E=new Float32Array(N);
+  for(let i=0;i<N;i++){const c=CF[i];let Lb=S.L-20;
+    if(c<300)Lb-=6*Math.log2(300/c); if(c>6000)Lb-=12*Math.log2(c/6000);
+    E[i]=bmOut(c,Lb,c,health(c,path),1);}
+  return E;
+}
+function compute(){
+  const sc=S.stim==="burst"?1.6:1;
+  const m={comps:[],E:null,Enorm:null,parts:[]};
+  if(S.stim==="click"){
+    m.E=clickPattern(S.path);m.Enorm=clickPattern("normal");
+    m.amp=new Float32Array(N);m.v=new Float32Array(N);m.tau=new Float32Array(N);m.nc=new Float32Array(N);
+    for(let i=0;i<N;i++){m.amp[i]=disp(m.E[i]);m.v[i]=Math.max(0.4,0.5+0.4*Math.log2(CF[i]/125));
+      m.tau[i]=latencyVis(D[i]);m.nc[i]=1.2+2.3*health(CF[i]);}
+  }else{
+    const comps=buildComps(S.path);
+    const P=patternFor(comps,S.path,sc);
+    m.E=P.E;m.Enorm=patternFor(buildComps("normal"),"normal",sc).E;
+    const fmin=Math.min(...comps.map(c=>c.f));
+    comps.forEach((c,k)=>{
+      const amp=new Float32Array(N),ph=new Float32Array(N);
+      for(let i=0;i<N;i++){
+        const lin=Math.pow(10,P.O[k][i]/20);let tot=0;for(const o of P.O)tot+=Math.pow(10,o[i]/20);
+        amp[i]=tot>0?disp(m.E[i])*lin/tot:0;ph[i]=phaseOf(c.f,CF[i]);}
+      let v=S.stim==="burst"?2:0.8;
+      if(comps.length>1)v=S.stim==="speech"?0.4+0.3*Math.log2(c.f/100):(c.role==="dp"?0.55:c.role==="f1"||c.role==="masker"?0.7:0.95);
+      m.comps.push({f:c.f,L:c.L,role:c.role,amp,ph,v,O:P.O[k]});
+    });
+    if(S.stim==="two"){
+      m.parts=m.comps.map(c=>({E:c.O,role:c.role,f:c.f,L:c.L}));
+    }
+    m.tau=new Float32Array(N);for(let i=0;i<N;i++)m.tau[i]=latencyVis(D[i]);
+  }
+  M=m;
+  // probe
+  if(S.follow){
+    let d;
+    if(S.stim==="two"){d=placeOf(FREQS[S.fi]);}
+    else{let bi=0;for(let i=1;i<N;i++)if(M.E[i]>M.E[bi])bi=i;d=D[bi];}
+    S.probeD=d;
+  }
+  updateText();
+}
+
+// ---------- displacement at time t ----------
+const BURST_P=4;
+function burstGate(s){s=((s%BURST_P)+BURST_P)%BURST_P;if(s<1)return s;if(s<1.5)return 1;if(s<2.5)return 2.5-s;return 0;}
+const CLICK_P=3.6;
+function yAt(i,t){
+  if(S.stim==="click"){let s=((t-M.tau[i])%CLICK_P+CLICK_P)%CLICK_P;const v=M.v[i];
+    const env=(1-Math.exp(-s*v*6))*Math.exp(-s*v/M.nc[i]);return M.amp[i]*env*Math.sin(2*Math.PI*v*s);}
+  let y=0;for(const c of M.comps)y+=c.amp[i]*Math.cos(2*Math.PI*c.v*t+c.ph[i]);
+  if(S.stim==="burst")y*=burstGate(t-M.tau[i]);
+  return y;
+}
+function envAt(i){
+  if(S.stim==="click")return M.amp[i];
+  let s=0;for(const c of M.comps)s+=c.amp[i];return Math.min(s,1.2);
+}
+function stapesAt(t){
+  if(S.stim==="click"){const s=((t%CLICK_P)+CLICK_P)%CLICK_P;return s<0.25?Math.sin(Math.PI*s/0.25):0;}
+  let y=0,w=0;for(const c of M.comps){const a=Math.pow(10,c.L/40);y+=a*Math.cos(2*Math.PI*c.v*t);w+=a;}
+  y=w?y/w:0;if(S.stim==="burst")y*=burstGate(t);return y;
+}
+
+// ---------- theme ----------
+let C={};
+function readTheme(){const cs=getComputedStyle(document.documentElement);
+  ["bg","panel","ink","muted","line","faint","accent","accent-soft","ohc","ihc","nerve","ion","warn","bone","tissue","endo","peri"].forEach(k=>C[k]=cs.getPropertyValue("--"+k).trim());}
+readTheme();
+if(window.matchMedia)matchMedia("(prefers-color-scheme: dark)").addEventListener("change",readTheme);
+new MutationObserver(readTheme).observe(document.documentElement,{attributes:true,attributeFilter:["data-theme"]});
+
+// ---------- canvases ----------
+const cv={};["bm","xs","tr","ex","io"].forEach(id=>{const el=document.getElementById(id);cv[id]={el,ctx:el.getContext("2d"),w:0,h:0};});
+function fit(){const dpr=Math.min(window.devicePixelRatio||1,2);
+  for(const k in cv){const o=cv[k],r=o.el.getBoundingClientRect();o.w=r.width;o.h=r.height;
+    o.el.width=Math.round(r.width*dpr);o.el.height=Math.round(r.height*dpr);o.ctx.setTransform(dpr,0,0,dpr,0,0);}
+  drawStatic();}
+new ResizeObserver(fit).observe(document.querySelector("main"));
+
+const padL=w=>w<500?38:58,PADR=22;
+const xOfD=(d,w)=>padL(w)+d/LEN*(w-padL(w)-PADR);
+const dOfX=(x,w)=>clamp((x-padL(w))/(w-padL(w)-PADR)*LEN,0,LEN);
+const ticksFor=w=>w<500?[8000,2000,500,125]:TICKF;
+const TICKF=[16000,8000,4000,2000,1000,500,250,125];
+function font(sz,fam,wt){return (wt||400)+" "+sz+"px "+(fam==="mono"?'"IBM Plex Mono",ui-monospace,monospace':'"IBM Plex Sans",system-ui,sans-serif');}
+
+// ---------- BM canvas ----------
+function drawBM(t){
+  const {ctx,w,h}=cv.bm;ctx.clearRect(0,0,w,h);
+  const top=34,bot=h-78,mid=(top+bot)/2,H=(bot-top)/2-6;
+  const x0=xOfD(0,w),x1=xOfD(LEN,w);
+  // scalae
+  ctx.fillStyle=C.peri;ctx.fillRect(x0,top,x1-x0,mid-top);
+  ctx.fillStyle=C.endo;ctx.fillRect(x0,mid,x1-x0,bot-mid);
+  ctx.strokeStyle=C.line;ctx.lineWidth=1;ctx.strokeRect(x0,top,x1-x0,bot-top);
+  if(S.labels){ctx.fillStyle=C.muted;ctx.font=font(11,"mono");ctx.textAlign="left";
+    ctx.fillText("SCALA VESTIBULI",x0+8,top+14);ctx.fillText("SCALA TYMPANI",x0+8,bot-8);
+    ctx.textAlign="right";ctx.fillText("helicotrema",x1-6,top+14);}
+  // dead region band
+  if(S.path==="dead"){const a=xOfD(placeOf(10000),w),b=xOfD(placeOf(3000),w);
+    ctx.save();ctx.beginPath();ctx.rect(a,top,b-a,bot-top);ctx.clip();ctx.strokeStyle=C.warn;ctx.globalAlpha=.35;
+    for(let x=a-200;x<b;x+=8){ctx.beginPath();ctx.moveTo(x,bot);ctx.lineTo(x+(bot-top),top);ctx.stroke();}
+    ctx.restore();if(S.labels){ctx.fillStyle=C.warn;ctx.font=font(11,"mono");ctx.textAlign="center";ctx.fillText("dead region (no IHC output)",(a+b)/2,top-6);}}
+  // stapes & windows
+  const sp=stapesAt(t)*5;
+  ctx.fillStyle=C.bone;ctx.strokeStyle=C.muted;ctx.lineWidth=1;
+  ctx.fillRect(x0-24+sp,top+10,14,mid-top-22);ctx.strokeRect(x0-24+sp,top+10,14,mid-top-22);
+  ctx.beginPath();ctx.moveTo(x0-10+sp,mid-18);ctx.lineTo(x0-2,mid-18);ctx.stroke();
+  ctx.beginPath();ctx.ellipse(x0-4,mid+(bot-mid)/2,3,(bot-mid)/2-10,0,0,Math.PI*2);ctx.strokeStyle=C.muted;ctx.setLineDash([3,3]);ctx.stroke();ctx.setLineDash([]);
+  if(S.labels&&w>=500){ctx.save();ctx.fillStyle=C.muted;ctx.font=font(10,"mono");ctx.translate(x0-30,mid);ctx.rotate(-Math.PI/2);ctx.textAlign="center";
+    ctx.fillText("stapes / oval window",-(mid-top)/2+4,-4);ctx.fillText("round window",(bot-mid)/2,-4);ctx.restore();}
+  // envelope
+  ctx.strokeStyle=C.muted;ctx.setLineDash([4,4]);ctx.lineWidth=1;
+  for(const sgn of [1,-1]){ctx.beginPath();for(let i=0;i<N;i++){const x=xOfD(D[i],w),y=mid-sgn*envAt(i)*H;i?ctx.lineTo(x,y):ctx.moveTo(x,y);}ctx.stroke();}
+  ctx.setLineDash([]);
+  // wave
+  const ys=new Float32Array(N);for(let i=0;i<N;i++)ys[i]=mid-clamp(yAt(i,t),-1.2,1.2)*H;
+  ctx.beginPath();ctx.moveTo(xOfD(0,w),mid);for(let i=0;i<N;i++)ctx.lineTo(xOfD(D[i],w),ys[i]);ctx.lineTo(xOfD(LEN,w),mid);ctx.closePath();
+  ctx.fillStyle=C["accent-soft"];ctx.fill();
+  ctx.beginPath();for(let i=0;i<N;i++){const x=xOfD(D[i],w);i?ctx.lineTo(x,ys[i]):ctx.moveTo(x,ys[i]);}
+  ctx.strokeStyle=C.accent;ctx.lineWidth=2.2;ctx.stroke();
+  // DPOAE backward arrow
+  if(S.stim==="two"&&S.tt==="dpoae"){const dp=M.comps.find(c=>c.role==="dp");const ok=dp&&dp.L>-10;
+    const xf2=xOfD(placeOf(FREQS[S.fi]),w);const ph=(t*0.35)%1;
+    if(ok){ctx.strokeStyle=C.nerve;ctx.fillStyle=C.nerve;ctx.globalAlpha=0.9;
+      const xa=xf2-(xf2-x0)*ph;ctx.beginPath();ctx.moveTo(xa+14,top+22);ctx.lineTo(xa,top+22);ctx.stroke();
+      ctx.beginPath();ctx.moveTo(xa,top+22);ctx.lineTo(xa+6,top+18);ctx.lineTo(xa+6,top+26);ctx.closePath();ctx.fill();ctx.globalAlpha=1;
+      if(S.labels){ctx.font=font(11,"mono");ctx.textAlign="left";ctx.fillText("2f1–f2 → ear canal (DPOAE)",Math.min(xf2+8,w-200),top+26);}}}
+  // probe
+  const xp=xOfD(S.probeD,w);ctx.strokeStyle=C.ihc;ctx.lineWidth=1.5;ctx.setLineDash([5,3]);
+  ctx.beginPath();ctx.moveTo(xp,top-4);ctx.lineTo(xp,bot+4);ctx.stroke();ctx.setLineDash([]);
+  ctx.fillStyle=C.ihc;ctx.beginPath();ctx.arc(xp,top-4,4,0,Math.PI*2);ctx.fill();
+  ctx.font=font(11,"mono",500);ctx.textAlign=xp>w-120?"right":"left";ctx.fillText("probe "+fmtF(cfAt(S.probeD)),xp+(xp>w-120?-8:8),top-8);
+  // top-view strip: BM width + OHC health
+  const sy=bot+14;
+  ctx.beginPath();ctx.moveTo(x0,sy+7);ctx.lineTo(x1,sy+1);ctx.lineTo(x1,sy+15);ctx.lineTo(x0,sy+9);ctx.closePath();ctx.fillStyle=C.faint;ctx.fill();ctx.strokeStyle=C.line;ctx.stroke();
+  for(let i=0;i<N-1;i++){const hh=health(CF[i]);ctx.fillStyle=C.ohc;ctx.globalAlpha=0.15+0.85*hh;
+    const xa=xOfD(D[i],w),xb=xOfD(D[i+1],w);const hw=1+6*(D[i]/LEN);ctx.fillRect(xa,sy+8-hw,xb-xa+0.5,hw*2);}
+  ctx.globalAlpha=1;
+  // axis
+  const ay=sy+32;ctx.strokeStyle=C.line;ctx.beginPath();ctx.moveTo(x0,ay-8);ctx.lineTo(x1,ay-8);ctx.stroke();
+  ctx.fillStyle=C.ink;ctx.font=font(11,"mono");ctx.textAlign="center";
+  for(const f of ticksFor(w)){const x=xOfD(placeOf(f),w);ctx.beginPath();ctx.moveTo(x,ay-12);ctx.lineTo(x,ay-4);ctx.stroke();ctx.fillText(f>=1000?f/1000+"k":String(f),x,ay+8);}
+  ctx.fillStyle=C.muted;ctx.textAlign="right";ctx.fillText("Hz",w-2,ay+8);
+  ctx.font=font(10,"mono");ctx.textAlign="left";
+  if(S.labels&&w>=500){ctx.fillText("base · narrow, stiff",x0,sy-2);ctx.textAlign="right";ctx.fillText("apex · wide, compliant",x1,sy-2);}
+  ctx.textAlign="left";ctx.fillStyle=C.muted;
+  const step=w<500?10:5;for(let mm=0;mm<=30;mm+=step){const x=xOfD(mm,w);ctx.fillText(mm===0?"0 mm":String(mm),x-3,top-18);}
+}
+
+// ---------- cross-section ----------
+const K=[],SP=[];let spikeBuf=0;
+function probeState(t){
+  const i=idxOf(S.probeD),c=CF[i];
+  const y=clamp(yAt(i,t),-1.2,1.2);
+  let a=envAt(i);
+  const h=health(c),alive=ihcAlive(c);
+  const P=x=>1/(1+Math.exp(-(x*2.2-0.9)/0.45)), P0=P(0);
+  const alpha=1/(1+Math.pow(c/800,2));
+  let dc=0;for(let k=0;k<16;k++)dc+=P(a*Math.cos(k/16*2*Math.PI))-P0;dc/=16;
+  // normalise receptor potential to a display unit
+  const ac=P(y)-P0;
+  let V=alive?(alpha*ac+(1-alpha)*dc)/0.8:0;
+  const O=M.E[i], drive=alive?1/(1+Math.exp(-(O-OTH-6)/5)):0;
+  const PL=1/(1+Math.pow(c/2000,3));
+  return {i,c,y,a,h,alive,V,ac,dc,alpha,O,drive,PL,Pn:P(y)-P0};
+}
+function drawXS(t,ps,dt){
+  const {ctx,w,h}=cv.xs;ctx.clearRect(0,0,w,h);
+  const xL=w*0.16,xR=w*0.95,baseY=h*0.72,Y=ps.y*26;
+  const f=x=>clamp(Math.sin(Math.PI*(x-xL)/(xR-xL)),0,1);
+  const dy=x=>-Y*f(x);
+  const T=tt=>xL+tt*(xR-xL);
+  // fluids
+  ctx.fillStyle=C.endo;ctx.fillRect(0,0,w,baseY-40);
+  ctx.fillStyle=C.peri;ctx.fillRect(0,baseY,w,h-baseY);
+  // right wall
+  ctx.fillStyle=C.bone;ctx.fillRect(xR,20,w-xR,h-20);
+  // Reissner's
+  ctx.strokeStyle=C.muted;ctx.lineWidth=1;ctx.beginPath();ctx.moveTo(w*0.12,baseY-112);ctx.lineTo(xR,16);ctx.stroke();
+  // limbus & osseous spiral lamina
+  ctx.fillStyle=C.bone;ctx.beginPath();ctx.moveTo(0,baseY-4);ctx.lineTo(xL,baseY-4);ctx.lineTo(xL,baseY+8);ctx.lineTo(0,baseY+16);ctx.closePath();ctx.fill();
+  ctx.fillStyle=C.tissue;ctx.beginPath();ctx.moveTo(0,baseY-4);ctx.lineTo(w*0.02,baseY-104);ctx.quadraticCurveTo(w*0.14,baseY-112,w*0.17,baseY-96);ctx.lineTo(w*0.13,baseY-4);ctx.closePath();ctx.fill();
+  ctx.strokeStyle=C.muted;ctx.stroke();
+  // BM
+  ctx.beginPath();for(let x=xL;x<=xR;x+=3){const y=baseY+dy(x);x===xL?ctx.moveTo(x,y):ctx.lineTo(x,y);}
+  ctx.strokeStyle=C.accent;ctx.lineWidth=4;ctx.stroke();
+  // Hensen/Claudius bump
+  ctx.fillStyle=C.tissue;ctx.strokeStyle=C.muted;ctx.lineWidth=1;
+  ctx.beginPath();ctx.moveTo(T(0.66),baseY+dy(T(0.66))-2);
+  for(let tt=0.66;tt<=0.95;tt+=0.01){const x=T(tt);const bump=Math.sin(Math.PI*(tt-0.66)/0.29);ctx.lineTo(x,baseY+dy(x)-2-bump*62*(tt<0.8?1:1-(tt-0.8)/0.3));}
+  ctx.lineTo(T(0.95),baseY+dy(T(0.95))-2);ctx.closePath();ctx.fill();ctx.stroke();
+  // pillars (tunnel)
+  const pi=T(0.2),po=T(0.36),pt=T(0.3);
+  const rlY=x=>baseY-80+dy(x);
+  ctx.strokeStyle=C.muted;ctx.lineWidth=3;
+  ctx.beginPath();ctx.moveTo(pi,baseY+dy(pi)-2);ctx.lineTo(pt-3,rlY(pt));ctx.stroke();
+  ctx.beginPath();ctx.moveTo(po,baseY+dy(po)-2);ctx.lineTo(pt+3,rlY(pt));ctx.stroke();
+  // reticular lamina
+  ctx.lineWidth=2;ctx.beginPath();ctx.moveTo(T(0.02),rlY(T(0.02)));for(let tt=0.02;tt<=0.66;tt+=0.02)ctx.lineTo(T(tt),rlY(T(tt)));ctx.stroke();
+  const hOHC=ps.h, mot=hOHC*clamp(ps.Pn,-0.3,0.8);
+  // OHCs
+  const ohcX=[0.42,0.5,0.58].map(T);
+  for(const x of ohcX){
+    const bottom=baseY+dy(x)-26, len0=52, len=len0*(1-0.12*mot), topY=bottom-len;
+    // Deiters
+    ctx.fillStyle=C.tissue;ctx.strokeStyle=C.muted;ctx.lineWidth=1;
+    ctx.beginPath();ctx.moveTo(x-7,baseY+dy(x)-2);ctx.lineTo(x+7,baseY+dy(x)-2);ctx.lineTo(x+6,bottom);ctx.lineTo(x-6,bottom);ctx.closePath();ctx.fill();ctx.stroke();
+    ctx.beginPath();ctx.moveTo(x+5,bottom);ctx.lineTo(x+13,rlY(x+13));ctx.stroke();
+    // cell
+    ctx.globalAlpha=0.3+0.7*hOHC;ctx.fillStyle=C.ohc;
+    roundRect(ctx,x-6,topY,12,len,5);ctx.fill();ctx.globalAlpha=1;
+    // stereocilia (tallest lateral, embedded in TM)
+    drawCilia(ctx,x,topY,ps.y,hOHC>0.3,[7,11,15],C.ohc);
+  }
+  // IHC
+  const xi=T(0.08),iy=baseY-44+dy(xi);
+  ctx.fillStyle=ps.alive?C.ihc:C.line;ctx.globalAlpha=ps.alive?0.85:1;
+  ctx.beginPath();ctx.ellipse(xi,iy,12,24,0,0,Math.PI*2);ctx.fill();
+  ctx.beginPath();ctx.moveTo(xi-6,iy-18);ctx.lineTo(xi-5,rlY(xi));ctx.lineTo(xi+5,rlY(xi));ctx.lineTo(xi+6,iy-18);ctx.closePath();ctx.fill();ctx.globalAlpha=1;
+  if(!ps.alive){ctx.strokeStyle=C.warn;ctx.lineWidth=2;ctx.beginPath();ctx.moveTo(xi-9,iy-9);ctx.lineTo(xi+9,iy+9);ctx.moveTo(xi+9,iy-9);ctx.lineTo(xi-9,iy+9);ctx.stroke();}
+  drawCilia(ctx,xi,rlY(xi),ps.y,ps.alive,[6,10,14],C.ihc);
+  // TM
+  ctx.fillStyle=C.faint;ctx.strokeStyle=C.muted;ctx.lineWidth=1;
+  ctx.beginPath();ctx.moveTo(w*0.1,baseY-104);
+  const tmBot=x=>rlY(x)-15-(x<ohcX[0]?(ohcX[0]-x)*0.05:0);
+  for(let x=w*0.13;x<=T(0.66);x+=4)ctx.lineTo(x,tmBot(x));
+  ctx.lineTo(T(0.66),tmBot(T(0.66))-10);
+  for(let x=T(0.66);x>=w*0.1;x-=4)ctx.lineTo(x,tmBot(x)-14-(T(0.66)-x)*0.06);
+  ctx.closePath();ctx.globalAlpha=0.9;ctx.fill();ctx.globalAlpha=1;ctx.stroke();
+  // nerve fibres
+  const gx=w*0.06,gy=h*0.93;
+  const path=[[xi,iy+22],[xL-4,baseY+4],[w*0.1,baseY+26],[gx,gy]];
+  ctx.strokeStyle=ps.alive?C.nerve:C.line;ctx.lineWidth=1.5;ctx.globalAlpha=0.6;
+  ctx.beginPath();path.forEach((p,k)=>k?ctx.lineTo(p[0],p[1]):ctx.moveTo(p[0],p[1]));ctx.stroke();ctx.globalAlpha=1;
+  ctx.fillStyle=C.tissue;ctx.strokeStyle=C.muted;ctx.beginPath();ctx.arc(gx,gy,9,0,Math.PI*2);ctx.fill();ctx.stroke();
+  // K+ ions
+  if(S.playing&&dt>0){const cells=[{x:xi,y:rlY(xi),ok:ps.alive}].concat(ohcX.map(x=>({x,y:baseY+dy(x)-26-52*(1-0.12*mot),ok:hOHC>0.3})));
+    const open=Math.max(0,ps.Pn);for(const c of cells){if(c.ok&&Math.random()<open*dt*18)K.push({x:c.x+(Math.random()*6-3),y:c.y-12,life:0,cell:c.x});}}
+  for(let k=K.length-1;k>=0;k--){const p=K[k];if(S.playing){p.life+=dt;p.y+=dt*42;}if(p.life>0.7){K.splice(k,1);continue;}
+    ctx.fillStyle=C.ion;ctx.globalAlpha=1-p.life/0.7;ctx.beginPath();ctx.arc(p.x,p.y,2.2,0,Math.PI*2);ctx.fill();}
+  ctx.globalAlpha=1;
+  // spikes along fibre
+  const segL=[];let tot=0;for(let k=1;k<path.length;k++){const l=Math.hypot(path[k][0]-path[k-1][0],path[k][1]-path[k-1][1]);segL.push(l);tot+=l;}
+  for(let k=SP.length-1;k>=0;k--){const s=SP[k];if(S.playing)s.p+=dt*1.6;if(s.p>1){SP.splice(k,1);continue;}
+    let dist=s.p*tot,j=0;while(j<segL.length-1&&dist>segL[j]){dist-=segL[j];j++;}
+    const u=dist/segL[j],x=path[j][0]+(path[j+1][0]-path[j][0])*u,y=path[j][1]+(path[j+1][1]-path[j][1])*u;
+    ctx.fillStyle=C.nerve;ctx.beginPath();ctx.arc(x,y,3.4,0,Math.PI*2);ctx.fill();}
+  // labels
+  if(S.labels){const sm=w<500;ctx.font=font(sm?9.5:10.5,"mono");ctx.fillStyle=C.muted;ctx.textAlign="left";
+    ctx.fillText(sm?"SCALA MEDIA (+80 mV)":"SCALA MEDIA · endolymph, +80 mV",w*0.3,34);
+    ctx.fillText(sm?"SCALA TYMPANI":"SCALA TYMPANI · perilymph",w*0.36,h-10);
+    if(!sm)ctx.fillText("Reissner's membrane",w*0.66,62);
+    ctx.fillStyle=C.ink;ctx.fillText(sm?"tectorial m.":"tectorial membrane",w*0.22,baseY-126);
+    ctx.fillStyle=C.ihc;ctx.textAlign="right";ctx.fillText(ps.alive?"IHC":"IHC (lost)",xi-14,iy+4);ctx.textAlign="left";
+    ctx.fillStyle=C.ohc;ctx.textAlign="left";ctx.fillText(hOHC>0.3?"OHC × 3":"OHC (damaged)",T(0.62),baseY-100);
+    ctx.fillStyle=C.muted;ctx.fillText(sm?"tunnel":"tunnel of Corti",pi-6,baseY+24);if(!sm)ctx.fillText("Deiters",ohcX[1]-10,baseY+38);
+    ctx.fillStyle=C.accent;ctx.textAlign="right";ctx.fillText(sm?"BM":"basilar membrane",xR-6,baseY+24);ctx.textAlign="left";
+    ctx.fillStyle=C.nerve;ctx.fillText(sm?"SG":"spiral ganglion",gx+14,gy+4);
+    ctx.fillStyle=C.ion;ctx.fillText("K⁺ influx",w*0.2,baseY-142);
+    ctx.fillStyle=C.muted;ctx.fillText("modiolus ←",4,14);ctx.textAlign="right";ctx.fillText("→ lateral wall",w-4,14);}
+}
+function roundRect(ctx,x,y,w,h,r){ctx.beginPath();ctx.moveTo(x+r,y);ctx.arcTo(x+w,y,x+w,y+h,r);ctx.arcTo(x+w,y+h,x,y+h,r);ctx.arcTo(x,y+h,x,y,r);ctx.arcTo(x,y,x+w,y,r);ctx.closePath();}
+function drawCilia(ctx,x,topY,y,ok,hts,col){
+  const th=clamp(y,-1.2,1.2)*0.45;ctx.strokeStyle=ok?col:C.muted;ctx.lineWidth=1.6;
+  hts.forEach((hh,k)=>{const bx=x-5+k*5;let L=ok?hh:hh*(0.35+0.25*k%2);const a=ok?th:(k-1)*0.6;
+    ctx.beginPath();ctx.moveTo(bx,topY);ctx.lineTo(bx+Math.sin(a)*L,topY-Math.cos(a)*L);ctx.stroke();});
+  if(ok){ctx.strokeStyle=col;ctx.lineWidth=0.8;ctx.globalAlpha=0.6;ctx.beginPath();
+    for(let k=0;k<2;k++){const bx=x-5+k*5,hh=hts[k];ctx.moveTo(bx+Math.sin(th)*hh,topY-Math.cos(th)*hh);const nx=x-5+(k+1)*5;ctx.lineTo(nx+Math.sin(th)*(hh+2),topY-Math.cos(th)*(hh+2));}
+    ctx.stroke();ctx.globalAlpha=1;}
+}
+
+// ---------- traces ----------
+const TB=420;const bufY=new Float32Array(TB),bufV=new Float32Array(TB),bufS=new Uint8Array(TB);let tbHead=0;
+function pushTrace(ps,spk){bufY[tbHead]=ps.y;bufV[tbHead]=ps.V;bufS[tbHead]=spk?1:0;tbHead=(tbHead+1)%TB;}
+function drawTR(ps){
+  const {ctx,w,h}=cv.tr;ctx.clearRect(0,0,w,h);
+  const lanes=[{y:h*0.2,label:"BM displacement",col:C.accent,buf:bufY,sc:h*0.13},
+               {y:h*0.53,label:"IHC receptor potential",col:C.ihc,buf:bufV,sc:h*0.13},
+               {y:h*0.84,label:"Auditory nerve spikes",col:C.nerve}];
+  const x0=10,x1=w-10;
+  lanes.forEach(L=>{
+    ctx.strokeStyle=C.line;ctx.lineWidth=1;ctx.beginPath();ctx.moveTo(x0,L.y);ctx.lineTo(x1,L.y);ctx.stroke();
+    ctx.fillStyle=C.muted;ctx.font=font(10.5,"mono");ctx.textAlign="left";ctx.fillText(L.label.toUpperCase(),x0,L.y-(L.sc||20)-8);
+    if(L.buf){ctx.strokeStyle=L.col;ctx.lineWidth=1.8;ctx.beginPath();
+      for(let k=0;k<TB;k++){const j=(tbHead+k)%TB;const x=x0+k/(TB-1)*(x1-x0);const y=L.y-clamp(L.buf[j],-1.3,1.3)*L.sc;k?ctx.lineTo(x,y):ctx.moveTo(x,y);}ctx.stroke();}
+    else{ctx.strokeStyle=L.col;ctx.lineWidth=1.6;for(let k=0;k<TB;k++){const j=(tbHead+k)%TB;if(bufS[j]){const x=x0+k/(TB-1)*(x1-x0);ctx.beginPath();ctx.moveTo(x,L.y-16);ctx.lineTo(x,L.y+4);ctx.stroke();}}}
+  });
+  // annotations
+  ctx.font=font(11,"sans");ctx.fillStyle=C.ink;ctx.textAlign="right";
+  const acdc=ps.alive?(ps.alpha>0.5?"mostly AC: follows each cycle":ps.alpha>0.15?"AC + DC: partial low-pass":"mostly DC: membrane filters out the cycles"):"no IHC: no receptor potential";
+  ctx.fillText(acdc,x1,lanes[1].y+lanes[1].sc+14);
+  const pl=!ps.alive?"no afferent output":ps.PL>0.6?"strong phase locking":ps.PL>0.2?"weak phase locking":"no phase locking: spikes random in time";
+  ctx.fillText(pl,x1,lanes[2].y+20);
+}
+
+// ---------- excitation ----------
+function drawEX(){
+  const {ctx,w,h}=cv.ex;ctx.clearRect(0,0,w,h);
+  const top=12,bot=h-34,ymin=0,ymax=100,Y=v=>bot-(clamp(v,ymin,ymax)-ymin)/(ymax-ymin)*(bot-top);
+  const x0=xOfD(0,w),x1=xOfD(LEN,w);
+  ctx.strokeStyle=C.faint;ctx.lineWidth=1;ctx.fillStyle=C.muted;ctx.font=font(10.5,"mono");ctx.textAlign="right";
+  for(let v=0;v<=100;v+=20){ctx.beginPath();ctx.moveTo(x0,Y(v));ctx.lineTo(x1,Y(v));ctx.stroke();ctx.fillText(v+" dB",x0-6,Y(v)+4);}
+  if(S.path==="dead"){const a=xOfD(placeOf(10000),w),b=xOfD(placeOf(3000),w);ctx.fillStyle=C.warn;ctx.globalAlpha=.1;ctx.fillRect(a,top,b-a,bot-top);ctx.globalAlpha=1;}
+  // threshold
+  ctx.strokeStyle=C.warn;ctx.setLineDash([2,4]);ctx.beginPath();ctx.moveTo(x0,Y(OTH));ctx.lineTo(x1,Y(OTH));ctx.stroke();ctx.setLineDash([]);
+  ctx.fillStyle=C.warn;ctx.textAlign="right";ctx.fillText("neural threshold",x1,Y(OTH)-5);
+  const line=(arr,col,wd,dash)=>{ctx.strokeStyle=col;ctx.lineWidth=wd;ctx.setLineDash(dash||[]);ctx.beginPath();let st=false;
+    for(let i=0;i<N;i++){if(arr[i]<-50){st=false;continue;}const x=xOfD(D[i],w),y=Y(arr[i]);st?ctx.lineTo(x,y):ctx.moveTo(x,y);st=true;}ctx.stroke();ctx.setLineDash([]);};
+  if(S.path!=="normal")line(M.Enorm,C.muted,1.4,[5,4]);
+  const pc={f1:C.ohc,f2:C.ihc,dp:C.nerve,masker:C.ohc,probe:C.ihc};
+  if(M.parts.length)M.parts.forEach(p=>line(p.E,pc[p.role],1.4));
+  // fill total
+  ctx.beginPath();ctx.moveTo(x0,Y(0));for(let i=0;i<N;i++)ctx.lineTo(xOfD(D[i],w),Y(M.E[i]));ctx.lineTo(x1,Y(0));ctx.closePath();ctx.fillStyle=C["accent-soft"];ctx.fill();
+  line(M.E,C.accent,2.2);
+  // probe
+  const xp=xOfD(S.probeD,w);ctx.strokeStyle=C.ihc;ctx.setLineDash([5,3]);ctx.beginPath();ctx.moveTo(xp,top);ctx.lineTo(xp,bot);ctx.stroke();ctx.setLineDash([]);
+  // axis
+  ctx.fillStyle=C.ink;ctx.textAlign="center";ctx.strokeStyle=C.line;
+  for(const f of ticksFor(w)){const x=xOfD(placeOf(f),w);ctx.beginPath();ctx.moveTo(x,bot);ctx.lineTo(x,bot+5);ctx.stroke();ctx.fillText(f>=1000?f/1000+"k":String(f),x,bot+17);}
+  ctx.fillStyle=C.muted;ctx.textAlign="left";ctx.fillText("CF, Hz (base → apex)",x0,h-2);
+}
+function drawIO(ps){
+  const {ctx,w,h}=cv.io;ctx.clearRect(0,0,w,h);
+  const l=44,r=w-12,top=12,bot=h-34;const X=v=>l+v/100*(r-l),Y=v=>bot-clamp(v,0,90)/90*(bot-top);
+  ctx.strokeStyle=C.faint;ctx.fillStyle=C.muted;ctx.font=font(10.5,"mono");ctx.lineWidth=1;
+  for(let v=0;v<=90;v+=30){ctx.beginPath();ctx.moveTo(l,Y(v));ctx.lineTo(r,Y(v));ctx.stroke();ctx.textAlign="right";ctx.fillText(v,l-6,Y(v)+4);}
+  for(let v=0;v<=100;v+=20){ctx.textAlign="center";ctx.fillText(v,X(v),bot+14);}
+  ctx.textAlign="left";ctx.fillText("input, dB SPL at probe CF",l,h-2);
+  ctx.save();ctx.translate(11,(top+bot)/2);ctx.rotate(-Math.PI/2);ctx.textAlign="center";ctx.fillText("BM output",0,0);ctx.restore();
+  ctx.strokeStyle=C.warn;ctx.setLineDash([2,4]);ctx.beginPath();ctx.moveTo(l,Y(OTH));ctx.lineTo(r,Y(OTH));ctx.stroke();ctx.setLineDash([]);
+  const c=ps.c;
+  const out=(L,hh)=>Math.max(bmOut(c,L,c,hh,1),L+passive(-0.5)); // peak response near the CF place
+  const curve=(hh,col,wd,dash)=>{ctx.strokeStyle=col;ctx.lineWidth=wd;ctx.setLineDash(dash||[]);ctx.beginPath();for(let L=0;L<=100;L+=2){const x=X(L),y=Y(out(L,hh));L?ctx.lineTo(x,y):ctx.moveTo(x,y);}ctx.stroke();ctx.setLineDash([]);};
+  // linear ref
+  ctx.strokeStyle=C.line;ctx.setLineDash([1,4]);ctx.beginPath();ctx.moveTo(X(0),Y(out(0,1)));ctx.lineTo(X(90-out(0,1)),Y(90));ctx.stroke();ctx.setLineDash([]);
+  if(ps.h<0.99)curve(1,C.muted,1.4,[5,4]);
+  curve(ps.h,C.accent,2.2);
+  if(S.stim!=="click"&&S.stim!=="speech"){const L=S.stim==="two"&&S.tt==="mask"?40:S.L;ctx.fillStyle=C.accent;ctx.beginPath();ctx.arc(X(L),Y(out(L,ps.h)),4.5,0,Math.PI*2);ctx.fill();}
+  ctx.font=font(11,"sans");ctx.fillStyle=C.ink;ctx.textAlign="left";
+  const thr=(()=>{for(let L=-10;L<=110;L++)if(out(L,ps.h)>=OTH)return L;return 110;})();
+  ctx.fillText(ps.alive?"threshold ≈ "+Math.max(thr,0)+" dB SPL":"no IHC output at this place",l+8,top+12);
+  ctx.fillStyle=C.muted;ctx.fillText(ps.h>0.7?"compressive: ≈0.2 dB/dB above 30 dB":ps.h>0.2?"reduced gain, less compression":"linear growth → recruitment",l+8,top+28);
+}
+
+// ---------- text ----------
+const $=id=>document.getElementById(id);
+function chip(k,v,cls){return '<div class="chip '+(cls||"")+'"><div class="k">'+k+'</div><div class="v">'+v+'</div></div>';}
+function updateText(){
+  const f=FREQS[S.fi],L=S.L;
+  $("freqOut").textContent=fmtF(f);
+  $("levelOut").textContent=L+(S.stim==="click"?" dB peSPL":" dB SPL");
+  $("freqLbl").textContent=S.stim==="two"?(S.tt==="dpoae"?"f2 frequency":"Probe frequency"):"Frequency";
+  $("levelLbl").textContent=S.stim==="two"?(S.tt==="dpoae"?"L1 (L2 = L1 − 10)":"Masker level"):S.stim==="speech"?"Overall level":"Level";
+  $("freqBox").hidden=S.stim==="click"||S.stim==="speech";
+  $("ttBox").hidden=S.stim!=="two";$("vowelBox").hidden=S.stim!=="speech";
+  const d=S.probeD,c=cfAt(d),i=idxOf(d),h=health(c),alive=ihcAlive(c);
+  const O=M.E[i];const aud=alive&&O>=OTH;
+  const G=effGain(c,S.stim==="two"&&S.tt==="mask"?40:L,h);
+  const PL=1/(1+Math.pow(c/2000,3));
+  let chips=chip("Probe CF",fmtF(c))+chip("Place",d.toFixed(1)+" mm from base")+
+    chip("OHC health",Math.round(h*100)+" %",h<0.5?"bad":"")+
+    chip("OHC gain now",G.toFixed(0)+" dB")+
+    chip("Nerve response",alive?(aud?"driven":"below threshold"):"none (dead IHC)",alive&&aud?"good":"bad")+
+    chip("Phase locking",PL>0.6?"strong":PL>0.2?"weak":"absent");
+  let A="",B="";
+  const pathNote={normal:"<p>Normal cochlea. The OHC amplifier adds up to about 60 dB at mid and high CFs (about 35 dB near the apex) for soft sounds and progressively less as level rises. This compression squeezes about 100 dB of input into a much smaller range of BM motion.</p>",
+    presby:"<p>Sloping high-frequency OHC loss, typical of age-related hearing loss. Toward the base the active tip is gone. Thresholds rise, tuning broadens, the peak moves basally, and growth becomes nearly linear. Compare the dashed normal pattern.</p>",
+    nihl:"<p>Noise-induced OHC damage centred near the 4 kHz place (about 3–6 kHz). Try 4 kHz, then 1 kHz and 8 kHz, to see the audiometric notch appear in the excitation pattern and the OHC strip.</p>",
+    dead:"<p>Dead region between CFs of about 3 and 10 kHz, with no functioning IHCs or afferent neurons and OHC loss around it. The BM still vibrates in the region but sends nothing to the auditory nerve. Place the probe inside the hatched band to see this.</p>"}[S.path];
+  if(S.stim==="tone"){
+    A="<p>A "+fmtF(f)+" tone at "+L+" dB SPL drives the stapes, and a travelling wave moves from base to apex. It grows slowly, peaks at the "+fmtF(f)+" place ("+placeOf(f).toFixed(1)+" mm from the base), then dies out within a few millimetres. Places basal to the peak respond on their low-frequency tails. Places apical to it barely move.</p>";
+    A+=f<=750?"<p>Low frequencies travel far along the cochlea. The wave passes every higher-frequency place first and drives their tails. This is why low-frequency sounds spread excitation (and masking) upward in frequency.</p>":f>=4000?"<p>High frequencies peak close to the stapes, in the basal turn. This region is the most vulnerable to noise, ototoxic drugs and ageing.</p>":"";
+    A+=L>=80?"<p>At "+L+" dB SPL most of the OHC gain is used up. The peak broadens and moves toward the base (the half-octave shift).</p>":L<=30?"<p>At "+L+" dB SPL the OHC amplifier is at close to full gain, so the peak is sharp and tall relative to the input.</p>":"";
+  }else if(S.stim==="click"){
+    A="<p>A click is broadband. The base is driven first, and the wave takes longer to reach apical places, so each place rings at its own CF after a travel delay. At the probe the delay is about "+latencyMs(d).toFixed(1)+" ms. Sharply tuned places ring for more cycles, and OHC loss shortens the ringing.</p><p>Basal places respond earliest and in synchrony, so the click-evoked ABR mainly reflects the 2–4 kHz region. Click spectrum here is limited by a typical transducer response (roll-off below 300 Hz and above 6 kHz).</p>";
+    chips+=chip("Travel time to probe","≈ "+latencyMs(d).toFixed(1)+" ms");
+  }else if(S.stim==="burst"){
+    A="<p>A "+fmtF(f)+" tone burst with a 2–1–2 cycle envelope (rise, plateau, fall). Because it is brief, its spectrum is wider than a pure tone's, so the excitation pattern is broader. Energy is still concentrated near the "+fmtF(f)+" place. Watch the wave arrive later at apical places.</p>";
+    chips+=chip("Travel time to probe","≈ "+latencyMs(d).toFixed(1)+" ms");
+  }else if(S.stim==="two"&&S.tt==="dpoae"){
+    const f2=f,f1=f2/1.22,fdp=2*f1-f2,h2=health(f2);const dp=M.comps.find(c=>c.role==="dp");
+    const Lec=(L-10-45)+24*Math.log10(Math.max(h2,0.003));const nf=-5;const snr=Lec-nf;
+    A="<p>Two primaries, f1 = "+fmtF(f1)+" (L1 = "+L+" dB) and f2 = "+fmtF(f2)+" (L2 = "+(L-10)+" dB), with f2/f1 = 1.22. Their travelling waves overlap near the f2 place. The OHC transducer nonlinearity there generates distortion products, the largest at 2f1–f2 = "+fmtF(fdp)+".</p><p>The distortion energy travels in two directions: apically to its own CF place (red trace in the excitation pattern), and backward to the stapes, where it is recorded in the ear canal as the DPOAE.</p>";
+    chips+=chip("2f1–f2",fmtF(fdp))+chip("DPOAE (est.)",(snr>=6?Lec.toFixed(0)+" dB SPL, present":"absent (SNR < 6 dB)"),snr>=6?"good":"bad");
+  }else if(S.stim==="two"){
+    const fm=f/2,ip=idxOf(placeOf(f));const mk=M.parts[0].E[ip],pr=M.parts[1].E[ip];const masked=mk>=pr-3;
+    A="<p>A "+fmtF(fm)+" masker at "+L+" dB SPL and a "+fmtF(f)+" probe at 40 dB SPL, one octave above it. The masker's excitation has a shallow basal tail, so at high masker levels it reaches and covers the probe place. This is the upward spread of masking.</p><p>A masker placed above the probe would barely reach the probe place, because the apical side of each excitation pattern is so steep.</p>";
+    chips+=chip("At probe place","masker "+mk.toFixed(0)+" / probe "+pr.toFixed(0)+" dB")+chip("Probe",masked?"masked":"audible",masked?"bad":"good");
+  }else{
+    const v=S.vowel;
+    A=v==="s"?"<p>The fricative /s/ has its energy above about 4 kHz, so it drives only the basal turn. With a high-frequency OHC loss or a basal dead region, /s/, /ʃ/, /f/ and /θ/ are among the first speech cues to be lost.</p>":
+      "<p>The vowel /"+v+"/ (F0 = 120 Hz) is a series of harmonics shaped by its formants. At the apex, where filters are narrow relative to harmonic spacing, the low harmonics are resolved and appear as separate ripples in the excitation pattern. Higher up, several harmonics fall in one filter and are unresolved; those places carry the F0 periodicity in their temporal pattern. The formant regions are where excitation is greatest.</p><p>Switch the cochlear status to presbycusis to see F2 and F3 flattened while F1 survives.</p>";
+  }
+  A+=pathNote;
+  // clinical correlates
+  const L_=[];
+  if(S.path==="normal")L_.push("Normal OHC function: TEOAEs and DPOAEs present across the tested range, sharp psychophysical tuning curves and a wide dynamic range.");
+  if(S.path==="presby"||S.path==="nihl"){L_.push("OHC loss produces raised thresholds of up to about 50–60 dB in the affected range. Losses beyond that point to additional IHC or neural involvement.");
+    L_.push("Loss of compression → loudness recruitment and a reduced dynamic range. Hearing aids need wide-dynamic-range compression (WDRC).");
+    L_.push("Broadened tuning → poorer frequency selectivity and more upward spread of masking, so speech in noise is harder even when amplified.");
+    L_.push("OAEs are reduced or absent where OHC gain is lost. DPOAEs are usually absent once the loss exceeds about 40–50 dB HL.");}
+  if(S.path==="nihl")L_.push("The notch at 3–6 kHz, with recovery at 8 kHz, is the classic audiometric sign of noise exposure. Ear-canal and middle-ear resonance boost 2–4 kHz energy that then reaches this region.");
+  if(S.path==="dead"){L_.push("A tone inside the dead region is heard only through IHCs at its edge (off-place listening). The pure-tone threshold can therefore look better than the region's true status.");
+    L_.push("Diagnose with the TEN(HL) test: the masked threshold is ≥ 10 dB above the TEN level and ≥ 10 dB above the absolute threshold. Psychophysical tuning curves with a shifted tip are another option.");
+    L_.push("Amplification well inside a dead region brings little benefit. Frequency lowering or cochlear implant candidacy may be considered.");}
+  if(S.stim==="click")L_.push("Click ABR wave V latency includes this cochlear travel time. Latency shifts with high-frequency loss partly reflect more apical generator places.");
+  if(S.stim==="burst")L_.push("Tone-burst ABR (for example 500 Hz and 4 kHz) and ASSR provide frequency-specific threshold estimates for infants and difficult-to-test patients.");
+  if(S.stim==="two"&&S.tt==="dpoae")L_.push("DPOAE screening: the response is usually judged present at SNR ≥ 6 dB. f2 reflects the cochlear place tested, and the DP-gram plots results against f2.");
+  if(S.stim==="speech")L_.push("Speech audibility across frequency (SII, Speech Banana) depends on which places are driven above threshold. Consonant cues sit mainly in the basal half.");
+  if(S.stim==="tone")L_.push("Pure-tone audiometry samples single places. Octave and inter-octave frequencies (750, 1500, 3000, 6000 Hz) matter when a threshold changes by ≥ 20 dB between octaves.");
+  B="<ul>"+L_.map(x=>"<li>"+x+"</li>").join("")+"</ul>";
+  $("chips").innerHTML=chips;$("explainA").innerHTML=A;$("explainB").innerHTML=B;
+  // legend for excitation
+  let lg='<span><i style="background:var(--accent)"></i>Total excitation</span>';
+  if(S.path!=="normal")lg+='<span><i style="background:var(--muted)"></i>Normal cochlea (dashed)</span>';
+  if(S.stim==="two"&&S.tt==="dpoae")lg+='<span><i style="background:var(--ohc)"></i>f1</span><span><i style="background:var(--ihc)"></i>f2</span><span><i style="background:var(--nerve)"></i>2f1–f2 distortion</span>';
+  if(S.stim==="two"&&S.tt==="mask")lg+='<span><i style="background:var(--ohc)"></i>Masker</span><span><i style="background:var(--ihc)"></i>Probe (40 dB)</span>';
+  $("exLegend").innerHTML=lg;
+}
+
+// ---------- loop ----------
+let t=0,last=performance.now(),acc=0;
+function frame(now){
+  let dt=Math.min(0.05,(now-last)/1000);last=now;
+  const sdt=S.playing?dt*S.speed:0;t+=sdt;
+  const ps=probeState(t);
+  let spk=false;
+  if(S.playing&&ps.alive){
+    const spont=0.9,drv=ps.drive*9;
+    const lock=ps.PL*2.2*Math.max(0,ps.y/Math.max(ps.a,0.05))+(1-ps.PL);
+    const rate=spont+drv*lock;
+    if(Math.random()<rate*sdt){spk=true;SP.push({p:0});}
+  }
+  if(S.playing){acc+=sdt;while(acc>1/110){acc-=1/110;pushTrace(ps,spk);spk=false;}}
+  drawBM(t);drawXS(t,ps,sdt);drawTR(ps);
+  requestAnimationFrame(frame);
+}
+function drawStatic(){if(!M)return;const ps=probeState(t);drawEX();drawIO(ps);}
+
+// ---------- controls ----------
+function setSeg(id,key){const el=$(id);el.addEventListener("click",e=>{const b=e.target.closest("button");if(!b)return;
+  S[key]=b.dataset.v;el.querySelectorAll("button").forEach(x=>x.setAttribute("aria-pressed",x===b?"true":"false"));refresh();});}
+setSeg("stimSeg","stim");setSeg("ttSeg","tt");
+function refresh(){compute();drawStatic();}
+$("freq").addEventListener("input",e=>{S.fi=+e.target.value;refresh();});
+$("level").addEventListener("input",e=>{S.L=+e.target.value;refresh();});
+$("path").addEventListener("change",e=>{S.path=e.target.value;refresh();});
+$("vowel").addEventListener("change",e=>{S.vowel=e.target.value;refresh();});
+$("follow").addEventListener("change",e=>{S.follow=e.target.checked;refresh();});
+$("labels").addEventListener("change",e=>{S.labels=e.target.checked;});
+$("speed").addEventListener("input",e=>{S.speed=+e.target.value;$("speedOut").textContent=S.speed.toFixed(2).replace(/0$/,"")+"×";});
+const playBtn=$("play");
+function syncPlay(){playBtn.textContent=S.playing?"Pause":"Play";}
+playBtn.addEventListener("click",()=>{S.playing=!S.playing;syncPlay();});
+$("reset").addEventListener("click",()=>{Object.assign(S,{stim:"tone",fi:4,L:60,tt:"dpoae",vowel:"a",path:"normal",follow:true});
+  $("freq").value=4;$("level").value=60;$("path").value="normal";$("vowel").value="a";$("follow").checked=true;
+  document.querySelectorAll("#stimSeg button").forEach(b=>b.setAttribute("aria-pressed",b.dataset.v==="tone"?"true":"false"));
+  document.querySelectorAll("#ttSeg button").forEach(b=>b.setAttribute("aria-pressed",b.dataset.v==="dpoae"?"true":"false"));refresh();});
+let dragging=false;
+function probeFromEvent(e){const r=cv.bm.el.getBoundingClientRect();S.probeD=dOfX(e.clientX-r.left,cv.bm.w);S.follow=false;$("follow").checked=false;updateText();drawStatic();}
+cv.bm.el.addEventListener("pointerdown",e=>{dragging=true;cv.bm.el.setPointerCapture(e.pointerId);probeFromEvent(e);});
+cv.bm.el.addEventListener("pointermove",e=>{if(dragging)probeFromEvent(e);});
+cv.bm.el.addEventListener("pointerup",()=>dragging=false);
+
+syncPlay();compute();fit();
+if(reduce){t=1.3;}
+requestAnimationFrame(frame);
+})();
+</script>
+
+</body>
+</html>

@@ -28,6 +28,10 @@ Top tabs (kept alongside Student / Faculty):
 2. **Advanced Atlas** — open head & neck / ear resources with subsections (*Ear & temporal bone*, *Larynx & airway*, *Nose & sinuses*, *Pharynx / neck*). Cards link out to SPL Open Anatomy atlases, OpenEar (CC BY 4.0, Zenodo DOI), and MIDA (CC0). **No Netter / Elsevier assets.**
 3. **Pathology** — curated, de-identified teaching cases (otology, larynx/voice, nose/sinus, H&N oncology examples) with teaching points and open link-outs (e.g. Mass Eye & Ear otopathology resources, TCIA, OpenEar). Teaching only — not for diagnosis.
 
+## Travelling Wave Lab (`/cochlea/`)
+
+Standalone interactive cochlear mechanics model: uncoiled basilar membrane with Greenwood place map, organ of Corti cross-section, IHC receptor potential and auditory nerve spikes, excitation patterns and BM input–output function. Stimuli: pure tone, click, tone burst, two-tone (DPOAE 2f1–f2, upward spread of masking), speech (/a/, /i/, /u/, /s/). Cochlear status: normal, presbycusis, NIHL 4 kHz notch, dead region. Single self-contained HTML file; works on phones.
+
 ## How students use it
 
 1. Open a module. The first load downloads atlas meshes (a few megabytes).
