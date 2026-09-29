@@ -361,7 +361,7 @@ function update(ctx, t, dt) {
   if (!neuralOn) net.clear();
   net.step(dt, dt);
   // constrictor glow during squeeze
-  (ctx.meshes.constrictor || []).forEach((m) => { if (m.material.emissive) m.material.emissiveIntensity = amp > 0 ? 0.6 : 0; });
+  (ctx.meshes.constrictor || []).forEach((m) => { if (m.material.emissive) m.material.emissiveIntensity = lerp(m.material.emissiveIntensity, amp > 0 ? 0.35 : 0, Math.min(1, dt * 4)); });
   drawTiming(cyc, { tHold, tOral, tTrig, tEnd, exc, close, uesOpen });
 }
 

@@ -68,7 +68,7 @@ export function createLab(cfg) {
   const rim = new THREE.DirectionalLight(0x74d9ff, 0.9); rim.position.set(200, 120, -240); lights.add(rim);
   const fill = new THREE.DirectionalLight(0xffe2c8, 0.5); fill.position.set(150, -80, 220); lights.add(fill);
   const composer = new EffectComposer(renderer); composer.addPass(new RenderPass(scene, camera));
-  const bloom = new UnrealBloomPass(new THREE.Vector2(512, 512), 0.55, 0.5, 0.72); composer.addPass(bloom); composer.addPass(new OutputPass());
+  const bloom = new UnrealBloomPass(new THREE.Vector2(512, 512), 0.38, 0.45, 0.84); composer.addPass(bloom); composer.addPass(new OutputPass());
   const ctx = { THREE, S, scene, camera, controls, renderer, lights, meshes: {}, byName: {}, W: {}, $, V, clamp, lerp, smooth, CSS, COL, std, solid, shellMat, sprite, glowTex, tube, setOp, getOp, MOBILE, cfg, bg: null };
   const offset = cfg.viewOffset !== false;
   function resize() {
@@ -95,13 +95,35 @@ export function createLab(cfg) {
     const el = document.createElement('div'); el.className = 'tag' + (opts.cls ? ' ' + opts.cls : ''); el.innerHTML = '<div class="in"><span></span></div>';
     if (opts.color) el.style.setProperty('--c', opts.color);
     const o = new CSS2DObject(el); scene.add(o);
-    const L = { o, el, span: el.querySelector('span'), text, posFn: typeof posFn === 'function' ? posFn : () => posFn, chs, when: opts.when };
+    const L = { o, el, box: el.querySelector('span'), span: el.querySelector('span'), text, posFn: typeof posFn === 'function' ? posFn : () => posFn, chs, when: opts.when };
     LABELS.push(L); return L;
   };
+  // Labels are decluttered: a label is hidden when it overlaps a higher-priority label (earlier = higher),
+  // sits under a panel, leaves the stage, or exceeds the per-screen limit. Checked a few times a second,
+  // with hysteresis so labels do not blink.
+  const MAXL = MOBILE ? 6 : 11;
+  let lastCull = 0;
+  function cull() {
+    const now = performance.now(); if (now - lastCull < 180) return; lastCull = now;
+    const sr = stage.getBoundingClientRect();
+    const obs = MOBILE ? [] : ['.brand', '.chapters', '.dock', '#card', '.side .panel'].flatMap((q) => [...document.querySelectorAll(q)]).map((e) => e.getBoundingClientRect()).filter((r) => r.width && r.height);
+    const hit = (a, b, pad = 3) => a.left < b.right + pad && a.right > b.left - pad && a.top < b.bottom + pad && a.bottom > b.top - pad;
+    const kept = [];
+    for (const L of LABELS) {
+      if (!L.want) { L.cull = false; L.miss = 0; continue; }
+      const r = L.box.getBoundingClientRect();
+      let bad = !r.width || kept.length >= MAXL || r.left < sr.left + 2 || r.right > sr.right - 2 || r.top < sr.top + 2 || r.bottom > sr.bottom - 2;
+      if (!bad) bad = obs.some((o) => hit(r, o, 0)) || kept.some((k) => hit(r, k));
+      // hysteresis: two agreeing checks before a label changes state
+      if (bad !== L.cull) { L.miss = (L.miss || 0) + 1; if (L.miss >= 2) { L.cull = bad; L.miss = 0; } } else L.miss = 0;
+      if (!L.cull) kept.push(r);
+    }
+  }
   function updateLabels() {
     for (const L of LABELS) {
-      const on = S.labels && (L.chs === 'all' || L.chs.includes(S.ch)) && (!L.when || L.when(ctx));
-      L.el.style.opacity = on ? 1 : 0; if (!on) continue;
+      L.want = S.labels && (L.chs === 'all' || L.chs.includes(S.ch)) && (!L.when || L.when(ctx));
+      const on = L.want && !L.cull;
+      const op = on ? '1' : '0'; if (L.el.style.opacity !== op) L.el.style.opacity = op; if (!L.want) continue;
       const t = typeof L.text === 'function' ? L.text(ctx) : L.text; if (L.span.textContent !== t) L.span.textContent = t;
       L.o.position.copy(L.posFn(ctx));
     }
@@ -210,7 +232,7 @@ export function createLab(cfg) {
       updateLabels();
     }
     if (S.glow && !ctx.noBloom) composer.render(); else renderer.render(scene, camera);
-    labelRenderer.render(scene, camera);
+    labelRenderer.render(scene, camera); cull();
     requestAnimationFrame(frame);
   }
   renderAll(); resize(); requestAnimationFrame(frame);
@@ -236,9 +258,9 @@ export function createNetwork(ctx, nodes, edges, opts = {}) {
   function pick(id) { const es = E[id]; if (!es) return null; let r = Math.random() * es.reduce((a, e) => a + e.w, 0); for (const e of es) { r -= e.w; if (r <= 0) return e; } return es[es.length - 1]; }
   const net = {
     N, E, lines, glows, live, lineMat: lm, block: null,
-    spawn(at, color, delay = 0, size = 2.6) {
+    spawn(at, color, delay = 0, size = 2.0) {
       let s = pool.pop(); if (!s) { s = sprite(color || COL.neural, size, 1); scene.add(s); }
-      s.material.color.set(color || opts.color || COL.neural); s.material.opacity = 1; s.scale.setScalar(size); s.visible = false;
+      s.material.color.set(color || opts.color || COL.neural); s.material.opacity = 0.8; s.scale.setScalar(size); s.visible = false;
       live.push({ s, at, e: pick(at), u: -delay });
     },
     step(dt, rdt) {
@@ -246,10 +268,10 @@ export function createNetwork(ctx, nodes, edges, opts = {}) {
         const k = live[i]; if (!k.e) { net.kill(i); continue; }
         k.u += dt / k.e.dur; if (k.u < 0) continue; k.s.visible = true;
         if (net.block && net.block(k)) { net.kill(i); continue; }
-        if (k.u >= 1) { glows[k.e.to].v = Math.min(1.6, glows[k.e.to].v + 0.45); k.at = k.e.to; k.u = 0; k.e = pick(k.at); if (!k.e) { net.kill(i); continue; } }
+        if (k.u >= 1) { glows[k.e.to].v = Math.min(1, glows[k.e.to].v + 0.18); k.at = k.e.to; k.u = 0; k.e = pick(k.at); if (!k.e) { net.kill(i); continue; } }
         k.s.position.copy(k.e.curve.getPointAt(clamp(k.u, 0, 1)));
       }
-      for (const id in glows) { const g = glows[id]; g.v *= Math.exp(-rdt * 2.2); g.s.material.opacity = Math.min(0.9, g.v * 0.8); g.s.scale.setScalar((opts.glowSize || 7) * (0.7 + g.v * 0.4)); }
+      for (const id in glows) { const g = glows[id]; g.v *= Math.exp(-rdt * 0.9); g.sm = (g.sm || 0) + (g.v - (g.sm || 0)) * Math.min(1, rdt * 3); g.s.material.opacity = Math.min(0.28, g.sm * 0.3); g.s.scale.setScalar((opts.glowSize || 7) * 0.85); }
     },
     kill(i) { const k = live[i]; k.s.visible = false; pool.push(k.s); live.splice(i, 1); },
     clear() { while (live.length) net.kill(live.length - 1); },

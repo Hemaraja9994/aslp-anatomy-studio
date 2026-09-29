@@ -209,7 +209,7 @@ function update(ctx, t, dt, rdt) {
   const hl = HL[ch] || {};
   const hlNames = new Map(); for (const k in hl) for (const n of G[k] || []) hlNames.set(n, hl[k]);
   if (ch === 6) { for (const n of G.broca) hlNames.set(n, RED); for (const n of G.insula) hlNames.set(n, RED); }
-  const pulse = 0.55 + 0.45 * Math.sin(t * 4);
+  const pulse = 0.75 + 0.25 * Math.sin(t * 1.8);
   for (const [name, m] of Object.entries(ctx.byName)) {
     const mat = m.material; if (!mat.emissive) continue;
     let target = 0, colr = null;

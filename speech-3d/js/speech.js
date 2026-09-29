@@ -250,7 +250,7 @@ function update(ctx, t, dt) {
   R.flow.kind = flow.kind; R.flow.s = flow.s; R.flow.closed = flow.closed; if (flow.burst) R.flow.burst = 1;
   R.updateAir(dt);
   R.glot.update(dt, gl);
-  R.contactGlow = flow.closed ? 0.6 : flow.kind === 'fricative' ? 0.25 : 0;
+  R.contactGlow = lerp(R.contactGlow, flow.closed ? 0.35 : flow.kind === 'fricative' ? 0.15 : 0, Math.min(1, dt * 6));
   flowState = { ...flow, glot: gl };
   // panels
   drawPalato(spec); drawVOT(spec); drawVowels(spec);

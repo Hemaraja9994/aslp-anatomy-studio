@@ -253,7 +253,7 @@ export function buildGlottis(ctx, at) {
     aL.position.set(-1.5 - 11 * Math.sin(G.open * 0.55 + w), 6.5 - 11 * Math.cos(G.open * 0.55 + w), 0);
     aR.position.set(1.5 + 11 * Math.sin(G.open * 0.55 + w), 6.5 - 11 * Math.cos(G.open * 0.55 + w), 0);
     L.position.x = -0.8; Rf.position.x = 0.8;
-    glow.material.opacity = G.open > 0.15 ? 0.25 : G.vib * 0.35;
+    glow.material.opacity = lerp(glow.material.opacity, G.open > 0.15 ? 0.18 : G.vib * 0.22, 1 - Math.exp(-4 * dt));
     void pL;
   };
   return G;

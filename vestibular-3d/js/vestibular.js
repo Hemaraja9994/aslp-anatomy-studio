@@ -184,7 +184,7 @@ function update(ctx, t, dt, rdt) {
   if (motion === 'yaw') yaw = 35 * Math.sin(t * 1.6);
   else if (motion === 'tilt') { roll = 28 * Math.sin(t * 0.8); pitch = 12 * Math.sin(t * 0.5); }
   else if (motion === 'impulse' || motion === 'nys') {
-    hitT += dt; if (motion === 'impulse' && hitT > 2.4) { hitT = 0; hitDir = -hitDir; }
+    hitT += dt; if (motion === 'impulse' && hitT > 4) { hitT = 0; hitDir = -hitDir; }
     const u = hitT < 0.15 ? smooth(hitT / 0.15) : hitT < 0.9 ? 1 : 1 - smooth((hitT - 0.9) / 0.6);
     yaw = 18 * hitDir * u;
   } else if (motion === 'bppv') { S.bppvT += dt; [yaw, pitch, roll] = keyAt(S.bppv === 'dix' ? DIX : EPLEY, S.bppvT); }
@@ -222,7 +222,7 @@ function update(ctx, t, dt, rdt) {
     const pos = C.pts.geometry.attributes.position;
     for (let i = 0; i < C.N; i++) { const ang = (i / C.N) * Math.PI * 2 + C.phase; pos.setXYZ(i, Math.cos(ang) * 6, Math.sin(ang) * 6, 0); }
     pos.needsUpdate = true; C.pts.material.opacity = 0.25 + Math.min(1, Math.abs(C.act)) * 0.75;
-    C.cup.material.emissive.set(C.act > 0.05 ? COL.ok : C.act < -0.05 ? COL.bad : 0x3060ff); C.cup.material.emissiveIntensity = 0.3 + Math.abs(C.act) * 0.8;
+    C.cup.material.emissive.set(C.act > 0.05 ? COL.ok : C.act < -0.05 ? COL.bad : 0x3060ff); C.cup.material.emissiveIntensity = 0.25 + Math.min(1, Math.abs(C.act)) * 0.45;
     C.cup.scale.set(1, 1, 1); C.cup.rotation.z = 0; C.cup.material.needsUpdate = false;
   }
   utricle.userData.mac.material.emissiveIntensity = 0.2 + Math.abs(roll) / 40;
@@ -250,7 +250,7 @@ function update(ctx, t, dt, rdt) {
   // muscle glow (lateral/medial recti) follows horizontal eye velocity
   const ev = (eyeH - (update.pe || 0)) / Math.max(dt, 1e-3); update.pe = eyeH;
   const lrL = ctx.byName['Lateral rectus muscle.l'], mrR = ctx.byName['Medial rectus muscle.r'], lrR = ctx.byName['Lateral rectus muscle.r'], mrL = ctx.byName['Medial rectus muscle.l'];
-  const on = (m, v) => { if (m && m.material.emissive) { m.material.emissive.set(COL.bad); m.material.emissiveIntensity = clamp(v, 0, 1.2); } };
+  const on = (m, v) => { if (m && m.material.emissive) { m.material.emissive.set(COL.bad); m.userData.gl = lerp(m.userData.gl || 0, clamp(v, 0, 0.6), Math.min(1, rdt * 3)); m.material.emissiveIntensity = m.userData.gl; } };
   on(lrL, ev / 60); on(mrR, ev / 60); on(lrR, -ev / 60); on(mrL, -ev / 60);
   // VOR network spikes
   net.visible = ch === 3 || ch === 0;

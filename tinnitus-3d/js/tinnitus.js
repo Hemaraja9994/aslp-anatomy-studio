@@ -289,12 +289,12 @@ function update(ctx, t, dt, rdt) {
   }
   net.step(dt, rdt); if (!net.visible) net.clear();
   // nuclei pulse with gain
-  for (const n of ['Posterior cochlear nucleus.r', 'Inferior colliculus.l', 'Medial geniculate body.l', 'Anterior cochlear nucleus.r']) { const m = ctx.byName[n]; if (m && m.material.emissive) m.material.emissiveIntensity = 0.25 + phantom * 0.5 * (0.6 + 0.4 * Math.sin(t * 7 + n.length)); }
+  for (const n of ['Posterior cochlear nucleus.r', 'Inferior colliculus.l', 'Medial geniculate body.l', 'Anterior cochlear nucleus.r']) { const m = ctx.byName[n]; if (m && m.material.emissive) m.material.emissiveIntensity = 0.25 + Math.min(1, phantom) * 0.35 * (0.8 + 0.2 * Math.sin(t * 1.5 + n.length)); }
   const hgm = ctx.byName['Transverse temporal gyri.l']; if (hgm) hgm.material.emissiveIntensity = 0.25 + phantom * 0.35;
   // limbic loop
   const habit = S.habit || (ch === 8 && S.ther.cbt);
   lim.visible = ch === 4 || ch === 8;
-  ctx.W.limbicNodes.forEach((m) => { m.visible = [4, 8].includes(ch) || (ch === 0); const green = /vmPFC|accumbens|reticular/.test(m.userData.nm); m.material.opacity = ch === 0 ? 0.35 : 0.85; m.material.emissiveIntensity = green ? (habit ? 0.8 : 0.15) : (habit ? 0.1 : 0.35 + 0.35 * Math.sin(t * 5)); });
+  ctx.W.limbicNodes.forEach((m) => { m.visible = [4, 8].includes(ch) || (ch === 0); const green = /vmPFC|accumbens|reticular/.test(m.userData.nm); m.material.opacity = ch === 0 ? 0.35 : 0.85; m.material.emissiveIntensity = green ? (habit ? 0.8 : 0.15) : (habit ? 0.1 : 0.35 + 0.12 * Math.sin(t * 1.6)); });
   if (ctx.S.playing && lim.visible) {
     if (Math.random() < dt * (habit ? 1.2 : 4) * (0.5 + phantom)) lim.spawn('mgb', COL.neural);
     if (!habit && Math.random() < dt * 4) lim.spawn(Math.random() < 0.5 ? 'a1' : 'amy', COL.bad);
@@ -311,7 +311,7 @@ function update(ctx, t, dt, rdt) {
   // objective: vessels pulse at ~72 bpm, myoclonus twitches, patulous breathing
   beatT += dt;
   const beat = Math.pow(Math.max(0, Math.sin(beatT * 2 * Math.PI * 1.2)), 6);
-  vessels.forEach((v, i) => { v.visible = ch === 6 && S.obj === 'vascular'; v.material.emissiveIntensity = 0.3 + beat * (i ? 0.6 : 1.4); });
+  vessels.forEach((v, i) => { v.visible = ch === 6 && S.obj === 'vascular'; v.material.emissiveIntensity = 0.3 + beat * (i ? 0.3 : 0.6); });
   const stp = ctx.byName['Stapes.r'], tmm = ctx.byName['Tympanic membrane.r'], tb = ctx.byName['Auditory tube.r'];
   const tw = ch === 6 && S.obj === 'myoclonus' ? (Math.sin(t * 60) * (Math.sin(t * 2.2) > 0.3 ? 1 : 0)) : 0;
   if (stp) { stp.userData.p0 = stp.userData.p0 || stp.position.clone(); stp.position.copy(stp.userData.p0).add(V(tw * 0.35, 0, 0)); }
@@ -330,8 +330,8 @@ function update(ctx, t, dt, rdt) {
     if (dep && eCol && ch === 3) col.lerp(eCol, S.reorg * clamp(1 - Math.abs(i - ei) / 7, 0.2, 1));
     m.material.color.copy(col); m.material.emissive.copy(col);
     const near = ei >= 0 ? Math.exp(-Math.pow((i - ei) / 2.2, 2)) : 0;
-    const hs = hgSprites[i]; hs.visible = m.visible; hs.material.opacity = (0.15 + 0.7 * near * g) * (0.6 + 0.4 * Math.sin(t * 9 + i));
-    m.material.emissiveIntensity = 0.4 + near * g * 0.8;
+    const hs = hgSprites[i]; hs.visible = m.visible; hs.material.opacity = (0.08 + 0.35 * near * g) * (0.85 + 0.15 * Math.sin(t * 1.8 + i * 0.4));
+    m.material.emissiveIntensity = 0.4 + near * g * 0.45;
   });
   drawSpec();
 }
