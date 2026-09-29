@@ -1,0 +1,59 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Brain, Speech & Language 3D</title>
+<meta name="description" content="Interactive 3D brain: speech motor network, dual-stream language model, cognitive networks, aphasia types with lesions and WAB-style profiles, Mayo dysarthria types with DDK patterns, apraxia of speech and cognitive-communication disorders.">
+<meta name="theme-color" content="#06090f">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Instrument+Sans:wght@400;500;600&family=Instrument+Serif:ital@0;1&family=JetBrains+Mono:wght@400;500&family=Noto+Sans+Kannada:wght@400;600&display=swap">
+<link rel="stylesheet" href="../lab3d/lab.css?v=1">
+<style>.sample{border:1px solid var(--line);border-radius:8px;padding:8px 10px;margin-top:10px}.sample b{font-family:var(--mono);font-size:10.5px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}.sample p{margin:4px 0 0}.dx{width:100%;border-collapse:collapse;font-size:12px;margin-top:6px}.dx th,.dx td{border-bottom:1px solid var(--line);padding:4px 5px;text-align:left;vertical-align:top}.dx th{font-family:var(--mono);font-size:10.5px;color:var(--muted)}</style>
+<script type="importmap">
+{ "imports": {
+  "three": "https://unpkg.com/three@0.160.0/build/three.module.js",
+  "three/addons/": "https://unpkg.com/three@0.160.0/examples/jsm/"
+} }
+</script>
+</head>
+<body>
+<div class="app">
+  <div id="stage" class="stage" aria-label="Brain, Speech & Language 3D: interactive 3D model. Drag to orbit, scroll or pinch to zoom.">
+    <div id="loader" class="loader"><div class="loader-ring"></div><p id="loadMsg">Loading anatomy…</p></div>
+    <div class="hint" id="hint">Drag to orbit · scroll or pinch to zoom · right-drag to pan</div>
+    <div id="overlay" class="overlay" hidden></div>
+  </div>
+  <header class="brand">
+    <a class="back" href="../">ASLP Anatomy Studio</a>&ensp;<a class="back" href="../lab3d/">All 3D labs</a>
+    <h1>Brain, Speech & Language 3D</h1>
+    <p>Networks for speech, language and cognition, and what lesions do</p>
+  </header>
+  <nav class="chapters" id="chapters" aria-label="Chapters"></nav>
+  <aside class="side">
+    <article class="card" id="card" aria-live="polite"></article>
+    <section class="panel">
+      <div id="prof"></div>
+      <div id="ddkBox" hidden><div class="panel-head"><h3>DDK /pʌtʌkʌ/ pattern</h3><span class="chip-note" id="ddkNote"></span></div><canvas id="ddk" style="height:90px" aria-label="Diadochokinetic rate pattern"></canvas></div>
+      <p class="credit">Models: Hickok &amp; Poeppel dual stream; Guenther DIVA; Darley, Aronson &amp; Brown (Mayo) dysarthria classification; Gorno-Tempini PPA criteria. Profiles are teaching illustrations. Anatomy: Z-Anatomy / BodyParts3D (CC BY-SA 4.0). Concept and design: Hemaraja Nayaka S.</p>
+    </section>
+  </aside>
+  <div class="dock" id="dock">
+    <div class="dock-row">
+      <button class="btn icon" id="prev" type="button" aria-label="Previous chapter">‹</button>
+      <button class="btn primary" id="play" type="button">Pause</button>
+      <button class="btn icon" id="next" type="button" aria-label="Next chapter">›</button>
+      <button class="btn ghost" id="tour" type="button" aria-pressed="false">Guided tour</button>
+    </div>
+    <div class="dock-row wrap" id="condRow" hidden><label class="field grow" for="cond"><span id="condLbl">Type</span><select id="cond"></select></label></div>
+    <div class="dock-row wrap toggles">
+      <label class="tg"><input type="checkbox" id="labels" checked> Labels</label>
+      <label class="tg"><input type="checkbox" id="glow" checked> Glow</label>
+      <label class="tg" for="speed">Speed <input type="range" id="speed" min="0.25" max="2" step="0.25" value="1"></label>
+    </div>
+  </div>
+</div>
+<script type="module" src="./js/brain.js?v=1"></script>
+</body>
+</html>

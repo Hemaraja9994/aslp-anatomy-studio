@@ -1,0 +1,61 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Vestibular & Balance 3D</title>
+<meta name="description" content="Interactive 3D vestibular system: semicircular canals and otolith organs, the vestibulo-ocular reflex on real brainstem nuclei and eye muscles, nystagmus, HINTS, vHIT, BPPV with Dix–Hallpike and Epley, and a vertigo disorder explorer.">
+<meta name="theme-color" content="#06090f">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Instrument+Sans:wght@400;500;600&family=Instrument+Serif:ital@0;1&family=JetBrains+Mono:wght@400;500&family=Noto+Sans+Kannada:wght@400;600&display=swap">
+<link rel="stylesheet" href="../lab3d/lab.css?v=1">
+<style>.mg{margin:6px 0 0;padding-left:18px}.mg li{margin:3px 0}</style>
+<script type="importmap">
+{ "imports": {
+  "three": "https://unpkg.com/three@0.160.0/build/three.module.js",
+  "three/addons/": "https://unpkg.com/three@0.160.0/examples/jsm/"
+} }
+</script>
+</head>
+<body>
+<div class="app">
+  <div id="stage" class="stage" aria-label="Vestibular & Balance 3D: interactive 3D model. Drag to orbit, scroll or pinch to zoom.">
+    <div id="loader" class="loader"><div class="loader-ring"></div><p id="loadMsg">Loading anatomy…</p></div>
+    <div class="hint" id="hint">Drag to orbit · scroll or pinch to zoom · right-drag to pan</div>
+    <div id="overlay" class="overlay" hidden></div>
+  </div>
+  <header class="brand">
+    <a class="back" href="../">ASLP Anatomy Studio</a>&ensp;<a class="back" href="../lab3d/">All 3D labs</a>
+    <h1>Vestibular & Balance 3D</h1>
+    <p>Canals, otoliths, the VOR and what goes wrong in vertigo</p>
+  </header>
+  <nav class="chapters" id="chapters" aria-label="Chapters"></nav>
+  <aside class="side">
+    <article class="card" id="card" aria-live="polite"></article>
+    <section class="panel">
+      <div class="panel-head"><h3>VNG · eye position</h3><span class="chip-note">slow phase → fast phase</span></div>
+      <canvas id="vng" style="height:112px" aria-label="Videonystagmography trace"></canvas>
+      <div class="panel-head" style="margin-top:10px"><h3>Vestibular afferent firing</h3><span class="chip-note">resting ~90 spikes/s</span></div>
+      <canvas id="rates" style="height:112px" aria-label="Afferent firing rates per canal"></canvas>
+      <p class="credit">Concepts: Ewald's laws; push–pull canal pairs; HINTS (Kattah 2009); vHIT; Bárány ICVD criteria. Values are teaching approximations. Anatomy: Z-Anatomy / BodyParts3D (CC BY-SA 4.0). Concept and design: Hemaraja Nayaka S.</p>
+    </section>
+  </aside>
+  <div class="dock" id="dock">
+    <div class="dock-row">
+      <button class="btn icon" id="prev" type="button" aria-label="Previous chapter">‹</button>
+      <button class="btn primary" id="play" type="button">Pause</button>
+      <button class="btn icon" id="next" type="button" aria-label="Next chapter">›</button>
+      <button class="btn ghost" id="tour" type="button" aria-pressed="false">Guided tour</button>
+    </div>
+    <div class="dock-row wrap" id="disRow" hidden><label class="field grow" for="dis"><span>Disorder</span><select id="dis"></select></label></div>
+    <div class="dock-row wrap toggles">
+      <label class="tg"><input type="checkbox" id="labels" checked> Labels</label>
+      <label class="tg"><input type="checkbox" id="glow" checked> Glow</label>
+      <label class="tg" for="speed">Speed <input type="range" id="speed" min="0.25" max="2" step="0.25" value="1"></label>
+    </div>
+  </div>
+</div>
+<script type="module" src="./js/vestibular.js?v=1"></script>
+</body>
+</html>

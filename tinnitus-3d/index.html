@@ -1,0 +1,62 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Tinnitus 3D</title>
+<meta name="description" content="Interactive 3D tinnitus lab: cochlear deafferentation and hidden hearing loss, central gain, tonotopic map reorganisation, thalamocortical and distress networks, somatosensory and pulsatile tinnitus, audiological assessment and evidence-based management.">
+<meta name="theme-color" content="#06090f">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Instrument+Sans:wght@400;500;600&family=Instrument+Serif:ital@0;1&family=JetBrains+Mono:wght@400;500&family=Noto+Sans+Kannada:wght@400;600&display=swap">
+<link rel="stylesheet" href="../lab3d/lab.css?v=1">
+<style>.mg{margin:6px 0 0;padding-left:18px}.mg li{margin:3px 0}.legend-line{font-family:var(--mono);font-size:10.5px;display:flex;gap:12px;margin:2px 0 0;flex-wrap:wrap}.thi{margin:8px 0 4px}.thi label{font-family:var(--mono);font-size:11px;color:var(--muted);display:block}.thi input{width:100%}.thi .pill{display:inline-block;border:1px solid;border-radius:99px;padding:1px 8px;font-size:11px;margin-top:4px}.muted{color:var(--muted);font-size:12px}</style>
+<script type="importmap">
+{ "imports": {
+  "three": "https://unpkg.com/three@0.160.0/build/three.module.js",
+  "three/addons/": "https://unpkg.com/three@0.160.0/examples/jsm/"
+} }
+</script>
+</head>
+<body>
+<div class="app">
+  <div id="stage" class="stage" aria-label="Tinnitus 3D: interactive 3D model. Drag to orbit, scroll or pinch to zoom.">
+    <div id="loader" class="loader"><div class="loader-ring"></div><p id="loadMsg">Loading anatomy…</p></div>
+    <div class="hint" id="hint">Drag to orbit · scroll or pinch to zoom · right-drag to pan</div>
+    <div id="overlay" class="overlay" hidden></div>
+  </div>
+  <header class="brand">
+    <a class="back" href="../">ASLP Anatomy Studio</a>&ensp;<a class="back" href="../lab3d/">All 3D labs</a>
+    <h1>Tinnitus 3D</h1>
+    <p>From a damaged cochlea to a phantom sound in the brain</p>
+  </header>
+  <nav class="chapters" id="chapters" aria-label="Chapters"></nav>
+  <aside class="side">
+    <article class="card" id="card" aria-live="polite"></article>
+    <section class="panel">
+      <div class="panel-head"><h3>Audiogram · 0.25–16 kHz</h3><span class="chip-note" id="pitchNote"></span></div>
+      <canvas id="aud" style="height:150px" aria-label="Audiogram with extended high frequencies and tinnitus pitch match"></canvas>
+      <p class="legend-line"><span style="color:#ff5a5a">○ right</span> <span style="color:#5b8cff">× left</span> <span style="color:#ff5c8a">★ pitch / loudness match</span></p>
+      <div class="panel-head" style="margin-top:8px"><h3>Central gain model</h3><span class="chip-note">gain <b id="gainVal"></b></span></div>
+      <canvas id="spec" style="height:120px" aria-label="Sound-driven input versus spontaneous activity across frequency"></canvas>
+      <p class="credit">Models: Jastreboff neurophysiological model; central gain (Schaette &amp; Kempter; Auerbach 2014); thalamocortical dysrhythmia (Llinás, De Ridder); noise cancellation (Rauschecker 2010). Guidelines: AAO-HNS 2014, NICE NG155 (2020). Audiograms, vessels and network nodes are schematic teaching approximations. Anatomy: Z-Anatomy / BodyParts3D (CC BY-SA 4.0). Concept and design: Hemaraja Nayaka S.</p>
+    </section>
+  </aside>
+  <div class="dock" id="dock">
+    <div class="dock-row">
+      <button class="btn icon" id="prev" type="button" aria-label="Previous chapter">‹</button>
+      <button class="btn primary" id="play" type="button">Pause</button>
+      <button class="btn icon" id="next" type="button" aria-label="Next chapter">›</button>
+      <button class="btn ghost" id="tour" type="button" aria-pressed="false">Guided tour</button>
+    </div>
+    <div class="dock-row wrap"><label class="field grow" for="prof"><span>Hearing profile</span><select id="prof"></select></label><label class="tg" for="gain">Central gain <input type="range" id="gain" min="0" max="1" step="0.05" value="0.6"></label><button type="button" id="listen" class="ghost" aria-pressed="false" title="Plays a 5-second example at low volume">Listen (low volume)</button></div>
+    <div class="dock-row wrap toggles">
+      <label class="tg"><input type="checkbox" id="labels" checked> Labels</label>
+      <label class="tg"><input type="checkbox" id="glow" checked> Glow</label>
+      <label class="tg" for="speed">Speed <input type="range" id="speed" min="0.25" max="2" step="0.25" value="1"></label>
+    </div>
+  </div>
+</div>
+<script type="module" src="./js/tinnitus.js?v=1"></script>
+</body>
+</html>
