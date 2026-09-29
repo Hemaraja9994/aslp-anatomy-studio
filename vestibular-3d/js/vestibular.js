@@ -26,6 +26,47 @@ const DIS = [
     feat: ['Episodes of vertigo from 5 min to 72 h with migraine features (headache, photophobia, aura)', 'Tests often normal between attacks', 'Most common cause of recurrent spontaneous vertigo'],
     mgmt: ['Lifestyle and trigger management (sleep, meals, stress)', 'Migraine prophylaxis (e.g. propranolol, flunarizine, amitriptyline)', 'Vestibular rehabilitation for persistent symptoms'] },
 ];
+// ---------------------------------------------------------------- phone motion (device orientation)
+// The phone stands in for the patient's head: top of the phone = top of the head, screen = face.
+const phone = { on: false, q: null, base: null, sm: null, ok: 'DeviceOrientationEvent' in window, touch: matchMedia('(pointer: coarse)').matches };
+function phoneSub() {
+  if (!phone.ok || !phone.touch) return '<p class="note">📱 Open this page on a phone to steer the head by moving the phone (canals, VOR and a guided Epley).</p>';
+  return `<div class="sub"><button type="button" data-act="phone" aria-pressed="${phone.on}">${phone.on ? '📱 Phone motion on' : '📱 Use phone motion'}</button>${phone.on ? '<button type="button" data-act="recal">Recalibrate</button>' : ''}</div>${phone.on ? '<p class="note">Hold the phone upright facing you, screen = face, then tap Recalibrate. Turn, tilt and lie it back like a head.</p>' : ''}`;
+}
+function onOrient(e) {
+  if (e.alpha == null) return;
+  const q = new THREE.Quaternion().setFromEuler(new THREE.Euler(e.beta * D2R, e.gamma * D2R, e.alpha * D2R, 'ZXY'));
+  if (!phone.base) phone.base = q.clone();
+  phone.q = phone.base.clone().invert().multiply(q);
+  if (!phone.sm) phone.sm = phone.q.clone();
+}
+async function setPhone(on) {
+  if (on) {
+    try { if (typeof DeviceOrientationEvent.requestPermission === 'function') { const r = await DeviceOrientationEvent.requestPermission(); if (r !== 'granted') return false; } } catch (e) { return false; }
+    phone.base = null; phone.q = null; phone.sm = null; addEventListener('deviceorientation', onOrient); phone.on = true; EP.st = 0; EP.hold = 0; EP.phi = 0.15;
+  } else { removeEventListener('deviceorientation', onOrient); phone.on = false; phone.q = null; }
+  return true;
+}
+// guided Epley for right posterior-canal BPPV, checked from the direction of gravity in head coordinates
+const EP = { st: 0, hold: 0, phi: 0.15, done: 0 };
+const EP_STEPS = [
+  ['Start: sit upright (phone upright, facing you)', (g) => g.y < -0.8, 0.15],
+  ['Step 1 · Dix–Hallpike: lie back, head turned 45° right and hanging', (g) => g.z < -0.45 && g.x < -0.25, 1.95],
+  ['Step 2 · turn the head 90° to the left, still hanging', (g) => g.z < -0.2 && g.x > 0.35, 3.55],
+  ['Step 3 · roll onto the left side, nose pointing down', (g) => g.x > 0.45 && g.z > 0.15, 4.5],
+  ['Step 4 · sit up slowly', (g) => g.y < -0.8, 4.9],
+];
+function phoneEpley(dt) {
+  const g = V(0, -1, 0).applyQuaternion(phone.sm.clone().invert());
+  if (EP.st < EP_STEPS.length) {
+    if (EP_STEPS[EP.st][1](g)) { EP.hold += dt; if (EP.hold > (EP.st === 0 ? 1 : 3)) { EP.phi = EP.phi; EP.target = EP_STEPS[EP.st][2]; EP.st++; EP.hold = 0; } } else EP.hold = Math.max(0, EP.hold - dt);
+  } else { EP.done += dt; if (EP.done > 8) { EP.st = 0; EP.done = 0; EP.target = 0.15; EP.phi = 0.15; } }
+  const prev = EP.phi, tgt = EP.target ?? 0.15; EP.phi += Math.sign(tgt - EP.phi) * Math.min(Math.abs(tgt - EP.phi), dt * 1.1);
+  const drive = Math.max(-0.8, Math.min(1, ((EP.phi - prev) / Math.max(dt, 1e-3)) * 0.8));
+  const list = EP_STEPS.map(([t], i) => `${i < EP.st ? '✓' : i === EP.st ? '→' : '·'} ${t}`).join('\n');
+  const step = EP.st >= EP_STEPS.length ? '✓ Otoconia back in the utricle. Repositioning complete.' : `${list}${EP.hold > 0.2 ? `  (hold… ${Math.ceil((EP.st === 0 ? 1 : 3) - EP.hold)} s)` : ''}`;
+  return { phi: EP.phi, drive, step };
+}
 const disBy = (id) => DIS.find((d) => d.id === id) || DIS[0];
 const S = { dis: 'normal', bppv: 'dix', bppvT: 0, hitSide: 1, caloric: 0 };
 
@@ -34,6 +75,7 @@ const lab = createLab({
   models: [{ url: '../lab3d/models/vest.glb' }, { url: '../hearing-3d/ear.glb', skip: /region|^Helix|Antihelix|Crura|Tragus|Antitragus|concha|Cymba|Lobule of auricle|notch|Apex of auricle|Auricular tubercle|Scapha|Triangular fossa|Intertragic|Eminentia|Fossa antihelica|Posterior auricular groove|gyr|sulcus|pole|Insula|plane|lobule|Medulla|Pons|Midbrain|Thalamus|colliculus|geniculate|cochlear nucleus|Chorda|Auditory tube|Superior temporal|Angle|Labial|Philtrum|Tubercle|Eyebrow|triangle|neck/i,
     regroup: (n, g) => (g === 'labyrinth' ? 'labyrinth' : g === 'nerve' ? 'vnerve' : g === 'bone' ? 'tbone' : g) }],
   state: S,
+  share: ['dis', 'bppv'],
   groups: {
     skin: { make: () => shellMat(0x7fa6c4, 2.0), op: [0.3, 0.25, 0.25, 0.14, 0.18, 0.5, 0.18, 0.25] },
     auricle: { make: () => std(0xd49a86), op: [1, 0.5, 0.5, 0.3, 0.4, 1, 0.4, 0.6] },
@@ -56,15 +98,15 @@ const lab = createLab({
       body: () => `<p>Balance combines <b>vestibular</b>, <b>visual</b> and <b>proprioceptive</b> input in the vestibular nuclei and cerebellum. Each inner ear has five sensors: three <b>semicircular canals</b> for angular acceleration and two <b>otolith organs</b> (utricle, saccule) for linear acceleration and gravity.</p>
         <p>Outputs stabilise gaze (vestibulo-ocular reflex), posture (vestibulospinal reflexes) and our sense of orientation (vestibulo-thalamo-cortical pathways). The magnified labyrinth on the left mirrors every head movement.</p>`,
       facts: () => [['5', 'sensors per ear: 3 canals + 2 otoliths'], ['≈ 90 spikes/s', 'resting discharge of vestibular afferents']] },
-    { k: 'Canals', nav: 'Semicircular canals', t: 'Canals sense head rotation', sig: CSS.fluid, cam: [V(-270, 70, 170), V(-95, 30, 30)], tour: 14, motion: 'yaw',
+    { k: 'Canals', nav: 'Semicircular canals', t: 'Canals sense head rotation', sig: CSS.fluid, cam: [V(-270, 70, 170), V(-95, 30, 30)], tour: 14, sub: () => phoneSub(), motion: 'yaw',
       body: () => `<p>When the head turns, the endolymph lags behind (inertia) and bends the <b>cupula</b> in the ampulla, deflecting the hair-cell bundles. The canals work in <b>push–pull pairs</b>: turning right excites the right horizontal canal and inhibits the left. The vertical canals pair diagonally as LARP and RALP.</p>
         <p><b>Ewald's laws:</b> eye movement occurs in the plane of the stimulated canal. For the horizontal canal, flow toward the ampulla (ampullopetal) excites; for the vertical canals, flow away (ampullofugal) excites. Excitation produces a larger response than inhibition, because firing cannot fall below zero.</p>`,
       facts: () => [['LARP · RALP', 'vertical canal pairs'], ['≈ 0.1–10 Hz', 'canal operating range']] },
-    { k: 'Otoliths', nav: 'Utricle & saccule', t: 'Otoliths sense gravity and linear motion', sig: CSS.fluid, cam: [V(-270, 70, 170), V(-95, 30, 30)], tour: 12, motion: 'tilt',
+    { k: 'Otoliths', nav: 'Utricle & saccule', t: 'Otoliths sense gravity and linear motion', sig: CSS.fluid, cam: [V(-270, 70, 170), V(-95, 30, 30)], tour: 12, sub: () => phoneSub(), motion: 'tilt',
       body: () => `<p>The <b>utricle</b> (roughly horizontal) and <b>saccule</b> (vertical) carry a gel membrane loaded with calcium carbonate crystals, the <b>otoconia</b>. Tilting the head or accelerating in a line shears the membrane over the hair cells. Hair cells are polarised on each side of the <b>striola</b>, so every direction is coded.</p>
         <p>Clinically, <b>cVEMP</b> tests the saccule and inferior vestibular nerve, and <b>oVEMP</b> tests the utricle and superior vestibular nerve. Otoconia displaced into a canal cause BPPV.</p>`,
       facts: () => [['cVEMP', 'saccule · inferior nerve · SCM'], ['oVEMP', 'utricle · superior nerve · inferior oblique']] },
-    { k: 'VOR', nav: 'Vestibulo-ocular reflex', t: 'The fastest reflex: the VOR', sig: CSS.neural, cam: [V(-170, 130, 340), V(0, 5, 25)], tour: 14, motion: 'impulse',
+    { k: 'VOR', nav: 'Vestibulo-ocular reflex', t: 'The fastest reflex: the VOR', sig: CSS.neural, cam: [V(-170, 130, 340), V(0, 5, 25)], tour: 14, sub: () => phoneSub(), motion: 'impulse',
       body: () => `<p>A rapid head turn to the <b>right</b> excites the right horizontal canal. The right vestibular nuclei drive the <b>left abducens nucleus</b>, which moves the left eye out through the left lateral rectus (VI) and, via the <b>medial longitudinal fasciculus</b>, moves the right eye in through the right oculomotor nucleus and medial rectus (III).</p>
         <p>The eyes rotate left at head speed, so gaze stays on target: a three-neuron arc with about 10 ms latency and a gain close to 1. The <b>video head impulse test</b> measures this gain.</p>`,
       facts: () => [['≈ 10 ms', 'VOR latency'], ['gain ≈ 1', 'normal vHIT'], ['3 neurons', 'afferent · VN · oculomotor']] },
@@ -75,7 +117,7 @@ const lab = createLab({
     { k: 'BPPV', nav: 'BPPV · Dix–Hallpike · Epley', t: () => (S.bppv === 'dix' ? 'Right posterior-canal BPPV: Dix–Hallpike' : 'Epley repositioning manoeuvre'), sig: CSS.bad, cam: [V(-330, 30, 260), V(-40, -30, 0)], tour: 30, motion: 'bppv',
       body: () => `<p>In <b>benign paroxysmal positional vertigo</b>, otoconia detach from the utricle and fall into a canal, most often the <b>posterior canal</b> (≈ 85–90 %), since it is the lowest when upright or supine. Moving the head moves the debris, which drags endolymph and deflects the cupula.</p>
         <p>${S.bppv === 'dix' ? '<b>Dix–Hallpike (right):</b> head turned 45° to the right, then the patient is brought supine with the head hanging about 20°. After a <b>latency</b> of a few seconds comes <b>upbeating, torsional</b> nystagmus (upper pole toward the lower, right ear), lasting under 60 s, <b>fatigable</b> on repetition, and reversing on sitting up.' : '<b>Epley:</b> from the right Dix–Hallpike position, turn the head 90° to the left, roll onto the left side with the nose down, then sit up. Each position is held until nystagmus stops (about 30–60 s), walking the debris round the canal and out through the common crus into the utricle. Success is about 80 % after one to three manoeuvres.'}</p>`,
-      sub: () => `<div class="sub"><button type="button" data-act="bppv" data-v="dix" aria-pressed="${S.bppv === 'dix'}">Dix–Hallpike (right)</button><button type="button" data-act="bppv" data-v="epley" aria-pressed="${S.bppv === 'epley'}">Epley manoeuvre</button></div><p class="note" id="bppvStep"></p>` },
+      sub: () => phoneSub() + `<div class="sub"><button type="button" data-act="bppv" data-v="dix" aria-pressed="${S.bppv === 'dix'}">Dix–Hallpike (right)</button><button type="button" data-act="bppv" data-v="epley" aria-pressed="${S.bppv === 'epley'}">Epley manoeuvre</button></div><p class="note" id="bppvStep"></p>` },
     { k: 'Disorders', nav: 'Disorder explorer', t: () => disBy(S.dis).name, sig: CSS.bad, cam: [V(-110, 60, 400), V(0, 15, 40)], tour: 16, motion: 'nys',
       body: () => { const d = disBy(S.dis); return `<p>${d.feat.map((f) => `• ${f}`).join('<br>')}</p><p class="note"><b>HINTS:</b> ${d.hints}</p>`; } },
     { k: 'Recovery', nav: 'Compensation & rehab', t: () => `Management: ${disBy(S.dis).name}`, sig: CSS.ok, cam: [V(-260, 110, 230), V(-10, 10, -10)], tour: 12,
@@ -188,6 +230,7 @@ function update(ctx, t, dt, rdt) {
     const u = hitT < 0.15 ? smooth(hitT / 0.15) : hitT < 0.9 ? 1 : 1 - smooth((hitT - 0.9) / 0.6);
     yaw = 18 * hitDir * u;
   } else if (motion === 'bppv') { S.bppvT += dt; [yaw, pitch, roll] = keyAt(S.bppv === 'dix' ? DIX : EPLEY, S.bppvT); }
+  if (phone.on && phone.q && phone.sm) { phone.sm.slerp(phone.q, Math.min(1, rdt * 12)); const e = new THREE.Euler().setFromQuaternion(phone.sm, 'YXZ'); pitch = e.x / D2R; yaw = e.y / D2R; roll = e.z / D2R; }
   head.rotation.set(pitch * D2R, yaw * D2R, roll * D2R, 'YXZ');
   inset.quaternion.copy(head.quaternion); placeInset(ctx);
   ctx.W.lead.geometry.setFromPoints([head.localToWorld(head.worldToLocal(ctx.W.leadTo.clone())), inset.position]);
@@ -202,7 +245,8 @@ function update(ctx, t, dt, rdt) {
   if (motion === 'bppv') {
     const T = S.bppvT % (S.bppv === 'dix' ? 30 : 38);
     let phi; // position along the posterior canal (radians from the ampulla)
-    if (S.bppv === 'dix') { phi = T < 6.5 ? 0.15 : T < 22 ? 0.15 + 1.9 * smooth((T - 6.5) / 5) : 2.05 - 1.9 * smooth((T - 23) / 3); bppvDrive = T > 6.5 && T < 22 ? Math.exp(-(T - 8) / 6) * (T > 6.5 ? smooth((T - 6.5) / 1) : 0) : T > 24 && T < 29 ? -0.6 * Math.exp(-(T - 24.5) / 2) : 0;
+    if (phone.on && phone.sm) { const r = phoneEpley(dt); phi = r.phi; bppvDrive = r.drive; step = r.step; }
+    else if (S.bppv === 'dix') { phi = T < 6.5 ? 0.15 : T < 22 ? 0.15 + 1.9 * smooth((T - 6.5) / 5) : 2.05 - 1.9 * smooth((T - 23) / 3); bppvDrive = T > 6.5 && T < 22 ? Math.exp(-(T - 8) / 6) * (T > 6.5 ? smooth((T - 6.5) / 1) : 0) : T > 24 && T < 29 ? -0.6 * Math.exp(-(T - 24.5) / 2) : 0;
       step = T < 2 ? 'Sitting: head turned 45° right' : T < 4.5 ? 'Lying back quickly, head hanging 20°' : T < 6.5 ? 'Latency: otoconia start to move…' : T < 22 ? 'Upbeating torsional nystagmus, fading (fatigable)' : 'Sitting up: nystagmus reverses briefly'; }
     else { phi = T < 6 ? 0.15 : T < 14.5 ? 0.15 + 1.8 * smooth((T - 6) / 4) : T < 24 ? 1.95 + 1.6 * smooth((T - 15) / 4) : T < 34 ? 3.55 + 1.3 * smooth((T - 24.5) / 4) : 4.85;
       bppvDrive = T > 6 && T < 12 ? 0.8 * Math.exp(-(T - 7) / 4) : T > 15 && T < 21 ? 0.5 * Math.exp(-(T - 16) / 4) : 0;
@@ -275,6 +319,8 @@ function onChapter(ctx, c) {
 }
 function onAction(ctx, act, v) {
   if (act === 'bppv') { S.bppv = v; S.bppvT = 0; ctx.renderCard(); }
+  if (act === 'phone') { setPhone(!phone.on).then(() => ctx.renderCard()); return; }
+  if (act === 'recal') { phone.base = null; phone.sm = null; phone.q = null; EP.st = 0; EP.hold = 0; return; }
   if (act === 'hit') { hitDir = +v; hitT = 0; }
 }
 $('dis').addEventListener('change', (e) => { S.dis = e.target.value; lab.renderAll(); });

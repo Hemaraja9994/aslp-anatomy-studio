@@ -12,6 +12,7 @@ import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js'
 import { OutputPass } from 'three/addons/postprocessing/OutputPass.js';
 import { ShaderPass } from 'three/addons/postprocessing/ShaderPass.js';
 import { CSS2DRenderer, CSS2DObject } from 'three/addons/renderers/CSS2DRenderer.js';
+import { readHash, installTools } from './tools.js';
 
 export { THREE };
 export const $ = (id) => document.getElementById(id);
@@ -53,7 +54,10 @@ export const tube = (pts, r, m, seg = 40, rs = 12) => new THREE.Mesh(new THREE.T
 
 // ---------------------------------------------------------------- lab
 export function createLab(cfg) {
+  // shared links: #ch=3&dis=central&cam=… restores the chapter, the module's shared state and the view
+  const HASH = readHash(cfg);
   const S = Object.assign({ ch: 0, playing: !REDUCED, labels: true, glow: !MOBILE && !COARSE, speed: 1, tour: false }, cfg.state || {});
+  if (HASH.ch != null) S.ch = HASH.ch;
   const stage = $('stage');
   // Phones and tablets: no MSAA, default power profile and a smaller pixel budget — large canvases on mobile GPUs
   // run out of memory and show black tiles or flicker.
@@ -83,7 +87,7 @@ export function createLab(cfg) {
   function sizeComposer() { if (!composer) return; const w = stage.clientWidth, h = stage.clientHeight; if (!w || !h) return; composer.setPixelRatio(renderer.getPixelRatio()); composer.setSize(w, h); bloom.resolution.set(w / 2, h / 2); }
   // if the GPU drops the context (low memory), stop drawing and offer a reload instead of flashing
   renderer.domElement.addEventListener('webglcontextlost', (e) => { e.preventDefault(); ctx.lost = true; const m = $('loadMsg'), l = $('loader'); if (m && l) { m.innerHTML = 'The graphics memory was reset by the device. <button type="button" onclick="location.reload()">Reload</button>'; l.classList.remove('done'); } });
-  const ctx = { THREE, S, scene, camera, controls, renderer, lights, meshes: {}, byName: {}, W: {}, $, V, clamp, lerp, smooth, CSS, COL, std, solid, shellMat, sprite, glowTex, tube, setOp, getOp, MOBILE, cfg, bg: null };
+  const ctx = { THREE, S, stage, HASH, GROUPS: cfg.groups, scene, camera, controls, renderer, lights, meshes: {}, byName: {}, W: {}, $, V, clamp, lerp, smooth, CSS, COL, std, solid, shellMat, sprite, glowTex, tube, setOp, getOp, MOBILE, cfg, bg: null };
   const offset = cfg.viewOffset !== false;
   function resize() {
     const w = stage.clientWidth, h = stage.clientHeight; if (!w || !h) return;
@@ -167,6 +171,7 @@ export function createLab(cfg) {
       setChapter(S.ch, true);
       setTimeout(() => { const h = $('hint'); if (h) h.style.opacity = 0; }, 6000);
       ctx.ready = true;
+      ctx.onReady && ctx.onReady();
     }
   }, (e) => { if (e.total) { prog[idx] = e.loaded / e.total; $('loadMsg').textContent = `Loading anatomy… ${Math.round((prog.reduce((a, b) => a + b, 0) / total) * 100)} %`; } },
   () => { $('loadMsg').textContent = 'The 3D model could not be loaded. Check the connection and reload the page.'; }));
@@ -198,6 +203,7 @@ export function createLab(cfg) {
     const sub = c.sub ? c.sub(ctx) : '';
     const lens = c.lens ? c.lens(ctx) : '';
     $('card').innerHTML = `<div class="kicker">${c.k}</div><h2>${typeof c.t === 'function' ? c.t(ctx) : c.t}</h2>${sub}${c.body(ctx)}${facts.length ? `<div class="facts">${facts.map(([b, s]) => `<div class="fact"><b>${b}</b><span>${s}</span></div>`).join('')}</div>` : ''}${lens}`;
+    ctx.afterCard && ctx.afterCard();
   }
   function renderAll() { renderChapters(); renderCard(); cfg.renderPanels && cfg.renderPanels(ctx); }
   ctx.renderAll = renderAll; ctx.renderCard = renderCard; ctx.renderChapters = renderChapters;
@@ -237,7 +243,8 @@ export function createLab(cfg) {
         const target = ctx.opFor(g);
         for (const m of ctx.meshes[g]) {
           if (m.userData.lock) continue;
-          const o = getOp(m.material), n = o + (target - o) * Math.min(1, rdt * 3.5); setOp(m.material, n);
+          const tg = ctx.meshTarget ? ctx.meshTarget(m, target, g) : target;
+          const o = getOp(m.material), n = o + (tg - o) * Math.min(1, rdt * 3.5); setOp(m.material, n);
           m.visible = n > 0.01 && !m.userData.hide;
           if (!m.material.uniforms) m.material.depthWrite = n > 0.95 && !m.userData.noDepth;
         }
@@ -254,6 +261,7 @@ export function createLab(cfg) {
   // on phones, skip drawing while the 3D view is scrolled out of sight
   let visibleStage = true;
   if ('IntersectionObserver' in window) new IntersectionObserver((es) => { visibleStage = es[0].isIntersecting; }).observe(stage);
+  installTools(ctx);
   renderAll(); resize(); requestAnimationFrame(frame);
   window.__lab = ctx;
   return ctx;

@@ -58,6 +58,7 @@ const lab = createLab({
     { url: '../hearing-3d/ear.glb', skip: EAR_SKIP, regroup: (n, g) => (g === 'bone' ? 'tbone' : g) },
   ],
   state: S,
+  share: ['prof', 'gain', 'habit', 'obj', 'thi'],
   groups: {
     skin: { make: () => shellMat(0x7fa6c4, 2.0), op: [0.3, 0.22, 0.12, 0.06, 0.12, 0.25, 0.25, 0.3, 0.25] },
     auricle: { make: () => std(0xd49a86), op: [1, 0.9, 0.2, 0.05, 0.2, 0.5, 0.8, 0.8, 0.6] },

@@ -70,6 +70,7 @@ const CH_3D = [0.35, 0.18, 0.18, 0.18, 0.18, 0.2, 0.2, 0.18, 0.18, 0.18, 0.18];
 const lab = createLab({
   models: [{ url: '../lab3d/models/head.glb' }],
   state: S,
+  share: ['cond', 'iddsi'],
   groups: {
     skin: { make: () => shellMat(0x7fa6c4, 2.0), op: CH_3D },
     auricle: { make: () => std(0xd49a86), op: [0.9, 0.1, 0.1, 0.1, 0.1, 0.1, 0.15, 0.1, 0.1, 0.1, 0.1] },

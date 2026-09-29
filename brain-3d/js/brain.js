@@ -88,6 +88,7 @@ const CAM_DEEP = [V(190, 150, 150), V(10, 38, -8)];
 const lab = createLab({
   models: [{ url: '../lab3d/models/brain.glb', regroup: (n, g) => (g === 'cortex' ? (n.endsWith('.l') ? 'cortexL' : 'cortexR') : g) }],
   state: S,
+  share: ['aph', 'dys', 'ccd'],
   groups: {
     skin: { make: () => shellMat(0x7fa6c4, 2.0), op: [0.3, 0.1, 0.1, 0.1, 0.1, 0.12, 0.1, 0.1] },
     cortexL: { make: () => std(0xb3a4d8, { roughness: 0.55, emissive: 0x000000 }), op: [0.9, 0.35, 0.55, 0.45, 0.92, 0.3, 0.85, 0.7] },

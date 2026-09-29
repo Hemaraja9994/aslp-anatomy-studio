@@ -1,6 +1,8 @@
 // Speech & Articulation 3D — English and standard Kannada phonetic repertoire on the real head model.
 import { createLab, THREE, V, clamp, lerp, smooth, CSS, COL, std, solid, shellMat, canvasCtx, $ } from '../../lab3d/engine.js';
 import { createOralRig, vowelPose, consonantPose, PLACE, PLACE_S } from '../../lab3d/oral.js';
+import { createLive, TARGETS, SPEAKER } from './live.js';
+const live = createLive();
 PLACE.interdental = { 0: [91, -53], 1: [83, -48.5] }; PLACE_S.interdental = 0.8;
 
 const CLIP = [new THREE.Plane(new THREE.Vector3(1, 0, 0), 0.3)]; // keep the left half → midsagittal section seen from the right
@@ -102,6 +104,7 @@ const OP = (a) => a;
 const lab = createLab({
   models: [{ url: '../lab3d/models/head.glb' }],
   state: S,
+  share: ['lang', 'ph', 'word', 'err'],
   groups: {
     skin: { make: () => shellMat(0x7fa6c4, 2.0), op: OP([0.35, 0.14, 0.14, 0.14, 0.14, 0.14, 0.14, 0.14, 0.14]) },
     auricle: { make: () => std(0xd49a86), op: OP([0.9, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1]) },
@@ -153,6 +156,12 @@ const lab = createLab({
     { k: 'Summary', nav: 'Place & manner map', t: 'Where and how', sig: CSS.air, cam: [V(-210, -40, 70), V(0, -50, 45)], tour: 12,
       body: () => `<p><b>Place</b> runs from the lips to the glottis: bilabial, labiodental, dental, alveolar, postalveolar, retroflex, palatal, velar, glottal. <b>Manner</b> is the degree of closure: stop, fricative, affricate, nasal, lateral, trill or tap, approximant. <b>Voicing</b> and, in Kannada, <b>aspiration</b> complete each description.</p>
         <p>Recordings: each sound has a slot for your own audio, e.g. <code>speech-3d/audio/kn/ka.mp3</code>. Add the files to the repository and the Play button appears automatically.</p>` },
+    { k: 'Live', nav: 'Live voice lab', t: 'Your voice, live', sig: CSS.ok, cam: [V(-235, -46, 58), V(0, -50, 55)], tour: 20,
+      sub: () => `<div class="sub"><button type="button" data-act="mic" aria-pressed="${live.on}">${live.on ? '■ Stop microphone' : '● Start microphone'}</button>${[['m', 'Adult male'], ['f', 'Adult female'], ['c', 'Child']].map(([k, n]) => `<button type="button" data-act="spk" data-v="${k}" aria-pressed="${live.spk === k}">${n}</button>`).join('')}</div>${live.err ? `<p class="note" style="color:${CSS.bad}">${live.err}</p>` : ''}`,
+      body: () => `<p>Say a long vowel (/i/, /a/, /u/, ಇ, ಆ, ಉ…) and watch your <b>F1–F2</b> point move on the vowel chart against the ${S.lang === 'kn' ? 'Kannada' : 'English'} targets, while the 3D tongue takes the matching height and backness. The spectrogram shows harmonics and formants; the pitch trace shows <b>F0</b>.</p>
+        <p>For <b>VOT</b>, say a stop + vowel slowly after a short pause: <i>pa, ba, pʰa, bʱa</i> (Kannada ಪ ಬ ಫ ಭ) or <i>pa, ba</i> in English. Negative = voicing lead (prevoiced), 0–30 ms = short lag, above 30 ms = long lag (aspirated).</p>
+        <p class="note">Everything is analysed in your browser; nothing is recorded or sent. Use a quiet room. Values are approximate and are for teaching, not diagnosis. Switch the target language with the tabs in the side panel.</p>`,
+      facts: () => [['F1 ↑', 'lower tongue, more open jaw'], ['F2 ↑', 'more front tongue']] },
   ],
   build,
   update,
@@ -223,6 +232,15 @@ function update(ctx, t, dt) {
   if (key !== lastKey) { cycle = 0; lastKey = key; }
   cycle += dt;
   let target, spec, gl = 'voiced', flow = { kind: 'vowel', s: 0.95, closed: false };
+  if (ctx.S.ch === 9) { // live voice: the tongue follows the speaker's formants
+    live.tick();
+    if (live.on && live.voiced && live.f1) { const A = live.artic(); target = vowelPose(A.h, A.b, A.round); gl = 'voiced'; }
+    else { target = vowelPose(0.45, 0.5, 0); gl = live.on && live.level > -45 ? 'voiceless' : 'open'; flow = { kind: live.on && live.level > -45 ? 'vowel' : 'silent', s: 0.95, closed: false }; }
+    R.rate = 10; R.set(target); R.update(dt); R.flow.kind = flow.kind; R.flow.s = flow.s; R.flow.closed = false; R.updateAir(dt); R.glot.update(dt, gl);
+    R.contactGlow = lerp(R.contactGlow, 0, Math.min(1, dt * 6)); flowState = { ...flow, glot: gl };
+    drawSpectro(); drawLiveTrace(); drawLiveVowels();
+    return;
+  }
   if (P.word) {
     const seq = P.word.seq, per = 0.42, total = seq.length * per + 0.9, c = cycle % total, i = Math.floor(c / per);
     const lang = P.word.lang;
@@ -287,6 +305,10 @@ function renderPanels(ctx) {
   checkAudio();
 }
 function onChapter(ctx, c) {
+  if (ctx.S.ch !== 9 && live.on) live.stop();
+  const hs = ['palato', 'vot', 'vch'].map((id) => { const cv = $(id); return cv && cv.previousElementSibling && cv.previousElementSibling.querySelector('h3'); });
+  const t = ctx.S.ch === 9 ? ['Spectrogram · 0–5.5 kHz · F1/F2 dots', 'Pitch (F0) and VOT', 'Your vowel space (F1 × F2)'] : ['Palatogram · tongue–palate contact', 'Voice-onset time', 'Vowel chart'];
+  hs.forEach((h, i) => { if (h) h.textContent = t[i]; });
   if (c.ph) { S.lang = c.ph[0]; S.ph = c.ph[1]; }
 }
 function onAction(ctx, act, v) {
@@ -295,6 +317,8 @@ function onAction(ctx, act, v) {
   if (act === 'word') { S.word = +v; ctx.renderAll(); return; }
   if (act === 'err') { S.err = v; S.showErr = false; ctx.renderAll(); return; }
   if (act === 'errshow') { S.showErr = v === '1'; ctx.renderAll(); return; }
+  if (act === 'mic') { if (live.on) { live.stop(); ctx.renderCard(); } else live.start().then(() => ctx.renderCard()); return; }
+  if (act === 'spk') { live.spk = v; ctx.renderCard(); return; }
   if (act === 'play') { if (audio) { audio.currentTime = 0; audio.play().catch(() => {}); } }
 }
 let audio = null, audioKey = '';
@@ -385,4 +409,57 @@ function drawVowels(p) {
     if (on) { g.strokeStyle = CSS.air; g.beginPath(); g.arc(x, y, 12, 0, 7); g.stroke(); }
   }
   if (p && p.vowel && p.to) { g.strokeStyle = CSS.air; g.lineWidth = 2; g.beginPath(); g.moveTo(X(p.b, p.h), Y(p.h)); g.lineTo(X(p.to[1], p.to[0]), Y(p.to[0])); g.stroke(); }
+}
+
+// ---------------------------------------------------------------- live voice panels
+let spectroBuf = null;
+function drawSpectro() {
+  const cv = $('palato'); if (!cv || !cv.offsetParent) return;
+  const r = cv.getBoundingClientRect(), dpr = Math.min(devicePixelRatio || 1, 2), W = Math.round(r.width * dpr), H = Math.round(r.height * dpr);
+  if (cv.width !== W || cv.height !== H) { cv.width = W; cv.height = H; spectroBuf = null; }
+  const g = cv.getContext('2d');
+  if (!spectroBuf) { spectroBuf = document.createElement('canvas'); spectroBuf.width = W; spectroBuf.height = H; const b = spectroBuf.getContext('2d'); b.fillStyle = '#05080d'; b.fillRect(0, 0, W, H); }
+  const b = spectroBuf.getContext('2d');
+  if (live.on && live.spec && ctxPlaying()) {
+    b.drawImage(spectroBuf, -2 * dpr, 0);
+    const maxHz = 5500, bins = Math.floor(maxHz / live.binHz), col = W - 2 * dpr;
+    for (let y = 0; y < H; y++) { const bi = Math.floor((1 - y / H) * bins); const v = live.spec[bi] / 255; const c = Math.floor(Math.pow(v, 1.6) * 255); b.fillStyle = `rgb(${c * 0.35 | 0},${c * 0.85 | 0},${c})`; b.fillRect(col, y, 2 * dpr, 1); }
+    if (live.voiced && live.f1) for (const f of [live.f1, live.f2]) { b.fillStyle = CSS.bad; b.fillRect(col, H - (f / maxHz) * H - dpr, 2 * dpr, 2 * dpr); }
+  }
+  g.setTransform(1, 0, 0, 1, 0, 0); g.drawImage(spectroBuf, 0, 0);
+  g.setTransform(dpr, 0, 0, dpr, 0, 0); g.fillStyle = CSS.dim; g.font = '10px "JetBrains Mono",monospace';
+  [1000, 2000, 3000, 4000, 5000].forEach((f) => g.fillText(`${f / 1000}k`, 4, r.height - (f / 5500) * r.height + 3));
+  if (!live.on) { g.fillStyle = CSS.muted; g.font = '12px "Instrument Sans",sans-serif'; g.fillText('Start the microphone in the chapter card', 40, r.height / 2); }
+}
+const ctxPlaying = () => lab.S.playing;
+function drawLiveTrace() {
+  const cv = $('vot'); if (!cv || !cv.offsetParent) return;
+  const { g, w, h } = canvasCtx(cv);
+  const tr = live.f0Trail, Y = (f) => h - 6 - ((Math.log2(Math.max(f, 60)) - Math.log2(60)) / (Math.log2(500) - Math.log2(60))) * (h - 14);
+  g.strokeStyle = 'rgba(150,185,215,.14)'; g.font = '9.5px "JetBrains Mono",monospace'; g.fillStyle = CSS.dim;
+  [100, 200, 400].forEach((f) => { g.beginPath(); g.moveTo(30, Y(f)); g.lineTo(w * 0.62, Y(f)); g.stroke(); g.fillText(f, 4, Y(f) + 3); });
+  g.strokeStyle = CSS.mech; g.lineWidth = 2; g.beginPath(); let pen = false;
+  tr.forEach((f, i) => { const x = 30 + (i / 239) * (w * 0.62 - 30); if (f > 0) { const y = Y(f); pen ? g.lineTo(x, y) : g.moveTo(x, y); pen = true; } else pen = false; }); g.stroke();
+  g.fillStyle = CSS.mech; g.font = '600 13px "JetBrains Mono",monospace'; g.fillText(live.f0 ? `F0 ${Math.round(live.f0)} Hz` : 'F0 —', 34, 13);
+  // VOT readout
+  const x0 = w * 0.66; g.fillStyle = CSS.muted; g.font = '10px "JetBrains Mono",monospace'; g.fillText('last VOT', x0, 14);
+  if (live.vot) {
+    const ms = live.vot.ms, cat = ms < 0 ? ['voicing lead', CSS.violet] : ms <= 30 ? ['short lag', CSS.ok] : ['long lag · aspirated', CSS.bad];
+    g.fillStyle = cat[1]; g.font = '600 22px "JetBrains Mono",monospace'; g.fillText(`${ms > 0 ? '+' : ''}${ms} ms`, x0, 42); g.font = '11px "Instrument Sans",sans-serif'; g.fillText(cat[0], x0, 60);
+    const fresh = performance.now() - live.vot.at < 1500; if (fresh) { g.strokeStyle = cat[1]; g.strokeRect(x0 - 6, 22, w - x0, 46); }
+  } else { g.fillStyle = CSS.dim; g.font = '11px "Instrument Sans",sans-serif'; g.fillText('say “pa” or “ba”', x0, 42); }
+}
+function drawLiveVowels() {
+  const cv = $('vch'); if (!cv || !cv.offsetParent) return;
+  const { g, w, h } = canvasCtx(cv); const k = SPEAKER[live.spk] || 1;
+  const X = (f2) => w - 14 - ((f2 - 600 * k) / (2700 * k - 600 * k)) * (w - 40), Y = (f1) => 12 + ((f1 - 200 * k) / (950 * k - 200 * k)) * (h - 30);
+  g.strokeStyle = 'rgba(150,185,215,.14)'; g.font = '9.5px "JetBrains Mono",monospace'; g.fillStyle = CSS.dim;
+  g.fillText('← F2 (front)', 6, h - 3); g.textAlign = 'right'; g.fillText('F1 ↓ (open)', w - 4, h - 3); g.textAlign = 'center';
+  for (const [n, f1, f2] of TARGETS[S.lang] || TARGETS.en) {
+    const x = X(f2 * k), y = Y(f1 * k); g.strokeStyle = 'rgba(233,239,246,.25)'; g.beginPath(); g.ellipse(x, y, 16, 11, 0, 0, 7); g.stroke();
+    g.fillStyle = 'rgba(233,239,246,.8)'; g.font = `12px ${S.lang === 'kn' ? '"Noto Sans Kannada",' : ''}"Instrument Sans",sans-serif`; g.fillText(n, x, y + 4);
+  }
+  const tr = live.fTrail; tr.forEach(([f1, f2], i) => { g.fillStyle = `rgba(88,211,140,${0.15 + (i / tr.length) * 0.6})`; g.beginPath(); g.arc(X(f2), Y(f1), 3, 0, 7); g.fill(); });
+  if (live.voiced && live.f1) { g.fillStyle = CSS.ok; g.beginPath(); g.arc(X(live.f2), Y(live.f1), 7, 0, 7); g.fill(); g.fillStyle = CSS.ink; g.font = '10px "JetBrains Mono",monospace'; g.fillText(`${Math.round(live.f1)} / ${Math.round(live.f2)}`, X(live.f2), Y(live.f1) - 11); }
+  g.textAlign = 'left';
 }
