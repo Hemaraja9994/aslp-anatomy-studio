@@ -55,8 +55,11 @@ export const tube = (pts, r, m, seg = 40, rs = 12) => new THREE.Mesh(new THREE.T
 export function createLab(cfg) {
   const S = Object.assign({ ch: 0, playing: !REDUCED, labels: true, glow: !MOBILE && !COARSE, speed: 1, tour: false }, cfg.state || {});
   const stage = $('stage');
-  const renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: 'high-performance', preserveDrawingBuffer: false });
-  renderer.setPixelRatio(Math.min(devicePixelRatio || 1, MOBILE ? 1.5 : 2));
+  // Phones and tablets: no MSAA, default power profile and a smaller pixel budget — large canvases on mobile GPUs
+  // run out of memory and show black tiles or flicker.
+  const LITE = MOBILE || COARSE;
+  const renderer = new THREE.WebGLRenderer({ antialias: !LITE, powerPreference: LITE ? 'default' : 'high-performance', preserveDrawingBuffer: false });
+  renderer.setPixelRatio(Math.min(devicePixelRatio || 1, LITE ? 1.5 : 2));
   renderer.outputColorSpace = THREE.SRGBColorSpace; renderer.toneMapping = THREE.ACESFilmicToneMapping;
   renderer.localClippingEnabled = true;
   stage.appendChild(renderer.domElement);
@@ -69,13 +72,22 @@ export function createLab(cfg) {
   const key = new THREE.DirectionalLight(0xffffff, 1.7); key.position.set(-220, 260, 180); lights.add(key);
   const rim = new THREE.DirectionalLight(0x74d9ff, 0.9); rim.position.set(200, 120, -240); lights.add(rim);
   const fill = new THREE.DirectionalLight(0xffe2c8, 0.5); fill.position.set(150, -80, 220); lights.add(fill);
-  const composer = new EffectComposer(renderer); composer.addPass(new RenderPass(scene, camera)); composer.addPass(nanGuard());
-  const bloom = new UnrealBloomPass(new THREE.Vector2(512, 512), 0.38, 0.45, 0.84); composer.addPass(bloom); composer.addPass(new OutputPass());
+  // glow (bloom) buffers are created only when glow is switched on, so phones never allocate them by default
+  let composer = null, bloom = null;
+  function ensureComposer() {
+    if (composer) return composer;
+    composer = new EffectComposer(renderer); composer.addPass(new RenderPass(scene, camera)); composer.addPass(nanGuard());
+    bloom = new UnrealBloomPass(new THREE.Vector2(256, 256), 0.38, 0.45, 0.84); composer.addPass(bloom); composer.addPass(new OutputPass());
+    sizeComposer(); return composer;
+  }
+  function sizeComposer() { if (!composer) return; const w = stage.clientWidth, h = stage.clientHeight; if (!w || !h) return; composer.setPixelRatio(renderer.getPixelRatio()); composer.setSize(w, h); bloom.resolution.set(w / 2, h / 2); }
+  // if the GPU drops the context (low memory), stop drawing and offer a reload instead of flashing
+  renderer.domElement.addEventListener('webglcontextlost', (e) => { e.preventDefault(); ctx.lost = true; const m = $('loadMsg'), l = $('loader'); if (m && l) { m.innerHTML = 'The graphics memory was reset by the device. <button type="button" onclick="location.reload()">Reload</button>'; l.classList.remove('done'); } });
   const ctx = { THREE, S, scene, camera, controls, renderer, lights, meshes: {}, byName: {}, W: {}, $, V, clamp, lerp, smooth, CSS, COL, std, solid, shellMat, sprite, glowTex, tube, setOp, getOp, MOBILE, cfg, bg: null };
   const offset = cfg.viewOffset !== false;
   function resize() {
     const w = stage.clientWidth, h = stage.clientHeight; if (!w || !h) return;
-    { const pr = Math.min(devicePixelRatio || 1, MOBILE || COARSE ? 1.5 : 2, Math.sqrt(3.2e6 / (w * h))); if (renderer.getPixelRatio() !== pr) { renderer.setPixelRatio(pr); composer.setPixelRatio(pr); } } renderer.setSize(w, h, false); labelRenderer.setSize(w, h); composer.setSize(w, h); bloom.resolution.set(w / 2, h / 2);
+    { const pr = Math.min(devicePixelRatio || 1, LITE ? 1.5 : 2, Math.sqrt((LITE ? 2.0e6 : 3.2e6) / (w * h))); if (renderer.getPixelRatio() !== pr) renderer.setPixelRatio(pr); } renderer.setSize(w, h, false); labelRenderer.setSize(w, h); sizeComposer();
     camera.aspect = w / h;
     if (offset && !MOBILE && w > 900) camera.setViewOffset(w, h, w > 1280 ? 95 : 80, 45, w, h); else camera.clearViewOffset();
     camera.updateProjectionMatrix();
@@ -234,10 +246,14 @@ export function createLab(cfg) {
       if (S.tour && S.playing) { tourClock += rdt; const c = CH[S.ch]; if (tourClock > (c.tour || 14)) { if (S.ch === CH.length - 1) stopTour(); else setChapter(S.ch + 1); } }
       updateLabels();
     }
-    if (S.glow && !ctx.noBloom) composer.render(); else renderer.render(scene, camera);
+    if (ctx.lost || (LITE && !visibleStage)) { requestAnimationFrame(frame); return; }
+    if (S.glow && !ctx.noBloom) ensureComposer().render(); else renderer.render(scene, camera);
     labelRenderer.render(scene, camera); cull();
     requestAnimationFrame(frame);
   }
+  // on phones, skip drawing while the 3D view is scrolled out of sight
+  let visibleStage = true;
+  if ('IntersectionObserver' in window) new IntersectionObserver((es) => { visibleStage = es[0].isIntersecting; }).observe(stage);
   renderAll(); resize(); requestAnimationFrame(frame);
   window.__lab = ctx;
   return ctx;

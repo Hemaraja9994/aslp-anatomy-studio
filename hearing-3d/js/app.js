@@ -30,8 +30,9 @@ const S = {
 
 // ---------------------------------------------------------------- renderer
 const stage = $('stage');
-const renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: 'high-performance' });
-renderer.setPixelRatio(Math.min(devicePixelRatio || 1, MOBILE ? 1.5 : 2));
+const LITE = MOBILE || COARSE; // phones/tablets: no MSAA, smaller pixel budget, glow buffers only on demand
+const renderer = new THREE.WebGLRenderer({ antialias: !LITE, powerPreference: LITE ? 'default' : 'high-performance' });
+renderer.setPixelRatio(Math.min(devicePixelRatio || 1, LITE ? 1.5 : 2));
 renderer.outputColorSpace = THREE.SRGBColorSpace;
 renderer.toneMapping = THREE.ACESFilmicToneMapping;
 renderer.toneMappingExposure = 1.05;
@@ -61,12 +62,14 @@ const bloom = new UnrealBloomPass(new THREE.Vector2(512, 512), 0.55, 0.5, 0.72);
 composer.addPass(bloom);
 composer.addPass(new OutputPass());
 
+let compSized = false, ctxLost = false;
+function sizeComp() { const w = stage.clientWidth, h = stage.clientHeight; if (!w || !h) return; composer.setPixelRatio(renderer.getPixelRatio()); composer.setSize(w, h); bloom.resolution.set(w / 2, h / 2); compSized = true; }
+renderer.domElement.addEventListener('webglcontextlost', (e) => { e.preventDefault(); ctxLost = true; const m = document.getElementById('loadMsg'), l = document.getElementById('loader'); if (m && l) { m.innerHTML = 'The graphics memory was reset by the device. <button type="button" onclick="location.reload()">Reload</button>'; l.classList.remove('done'); } });
 function resize() {
   const w = stage.clientWidth, h = stage.clientHeight;
-  { const pr = Math.min(devicePixelRatio || 1, MOBILE || COARSE ? 1.5 : 2, Math.sqrt(3.2e6 / (w * h))); if (renderer.getPixelRatio() !== pr) { renderer.setPixelRatio(pr); composer.setPixelRatio(pr); } } renderer.setSize(w, h, false);
+  if (!w || !h) return; { const pr = Math.min(devicePixelRatio || 1, LITE ? 1.5 : 2, Math.sqrt((LITE ? 2.0e6 : 3.2e6) / (w * h))); if (renderer.getPixelRatio() !== pr) renderer.setPixelRatio(pr); } renderer.setSize(w, h, false);
   labelRenderer.setSize(w, h);
-  composer.setSize(w, h);
-  bloom.resolution.set(w / 2, h / 2);
+  compSized = false; if (S.glow) sizeComp();
   camera.aspect = w / h;
   // keep the subject centred in the free area between the side panels (desktop)
   if (!MOBILE && w > 900) camera.setViewOffset(w, h, w > 1280 ? 95 : 80, 45, w, h); else camera.clearViewOffset();
@@ -918,7 +921,8 @@ function frame() {
   if (S.tour && S.playing) { tourClock += rdt; if (tourClock > (S.ch === 0 ? 9 : 14)) { if (S.ch === CH.length - 1) stopTour(); else setChapter(S.ch + 1); } }
 
   updateLabels();
-  if (S.glow) composer.render(); else renderer.render(scene, camera);
+  if (ctxLost) { requestAnimationFrame(frame); return; }
+  if (S.glow) { if (!compSized) sizeComp(); composer.render(); } else renderer.render(scene, camera);
   labelRenderer.render(scene, camera);
   requestAnimationFrame(frame);
 }

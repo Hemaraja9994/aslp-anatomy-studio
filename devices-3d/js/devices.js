@@ -65,8 +65,9 @@ const status = (dev) => condBy(S.cond).m[dev];
 
 // ================================================================ renderer
 const stage = $('stage');
-const renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: 'high-performance' });
-renderer.setPixelRatio(Math.min(devicePixelRatio || 1, MOBILE ? 1.5 : 2));
+const LITE = MOBILE || COARSE; // phones/tablets: no MSAA, smaller pixel budget, glow buffers only on demand
+const renderer = new THREE.WebGLRenderer({ antialias: !LITE, powerPreference: LITE ? 'default' : 'high-performance' });
+renderer.setPixelRatio(Math.min(devicePixelRatio || 1, LITE ? 1.5 : 2));
 renderer.outputColorSpace = THREE.SRGBColorSpace;
 renderer.toneMapping = THREE.ACESFilmicToneMapping;
 stage.appendChild(renderer.domElement);
@@ -86,9 +87,12 @@ const composer = new EffectComposer(renderer);
 composer.addPass(new RenderPass(scene, camera)); composer.addPass(nanGuard());
 const bloom = new UnrealBloomPass(new THREE.Vector2(512, 512), 0.55, 0.5, 0.72);
 composer.addPass(bloom); composer.addPass(new OutputPass());
+let compSized = false, ctxLost = false;
+function sizeComp() { const w = stage.clientWidth, h = stage.clientHeight; if (!w || !h) return; composer.setPixelRatio(renderer.getPixelRatio()); composer.setSize(w, h); bloom.resolution.set(w / 2, h / 2); compSized = true; }
+renderer.domElement.addEventListener('webglcontextlost', (e) => { e.preventDefault(); ctxLost = true; const m = document.getElementById('loadMsg'), l = document.getElementById('loader'); if (m && l) { m.innerHTML = 'The graphics memory was reset by the device. <button type="button" onclick="location.reload()">Reload</button>'; l.classList.remove('done'); } });
 function resize() {
   const w = stage.clientWidth, h = stage.clientHeight;
-  { const pr = Math.min(devicePixelRatio || 1, MOBILE || COARSE ? 1.5 : 2, Math.sqrt(3.2e6 / (w * h))); if (renderer.getPixelRatio() !== pr) { renderer.setPixelRatio(pr); composer.setPixelRatio(pr); } } renderer.setSize(w, h, false); labelRenderer.setSize(w, h); composer.setSize(w, h); bloom.resolution.set(w / 2, h / 2);
+  if (!w || !h) return; { const pr = Math.min(devicePixelRatio || 1, LITE ? 1.5 : 2, Math.sqrt((LITE ? 2.0e6 : 3.2e6) / (w * h))); if (renderer.getPixelRatio() !== pr) renderer.setPixelRatio(pr); } renderer.setSize(w, h, false); labelRenderer.setSize(w, h); compSized = false; if (S.glow) sizeComp();
   camera.aspect = w / h;
   if (!MOBILE && w > 900) camera.setViewOffset(w, h, w > 1280 ? 95 : 80, 45, w, h); else camera.clearViewOffset();
   camera.updateProjectionMatrix();
@@ -879,7 +883,8 @@ function frame() {
   // highlight the chain step in step with the packets
   const lis = $('chain').children; if (lis.length) { const k = Math.floor((t * vis * 1.2) % lis.length); for (let i = 0; i < lis.length; i++) lis[i].classList.toggle('on', i === k); }
   updateLabels();
-  if (S.glow) composer.render(); else renderer.render(scene, camera);
+  if (ctxLost) { requestAnimationFrame(frame); return; }
+  if (S.glow) { if (!compSized) sizeComp(); composer.render(); } else renderer.render(scene, camera);
   labelRenderer.render(scene, camera);
   requestAnimationFrame(frame);
 }
