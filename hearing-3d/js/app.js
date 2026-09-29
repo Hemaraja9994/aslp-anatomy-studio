@@ -9,6 +9,7 @@ import { EffectComposer } from 'three/addons/postprocessing/EffectComposer.js';
 import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';
 import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js';
 import { OutputPass } from 'three/addons/postprocessing/OutputPass.js';
+import { ShaderPass } from 'three/addons/postprocessing/ShaderPass.js';
 import { CSS2DRenderer, CSS2DObject } from 'three/addons/renderers/CSS2DRenderer.js';
 import * as P from './physio.js';
 
@@ -16,6 +17,7 @@ const $ = (id) => document.getElementById(id);
 const V = (x, y, z) => new THREE.Vector3(x, y, z);
 const clamp = P.clamp;
 const MOBILE = matchMedia('(max-width: 900px)').matches;
+const COARSE = matchMedia('(pointer: coarse)').matches;
 const REDUCED = matchMedia('(prefers-reduced-motion: reduce)').matches;
 
 const COL = { air: 0x5fe3f2, mech: 0xf3b64a, fluid: 0x7d95ff, neural: 0xff5c8a, ok: 0x58d38c, bad: 0xff8a5c };
@@ -23,7 +25,7 @@ const CSS = { air: '#5fe3f2', mech: '#f3b64a', fluid: '#7d95ff', neural: '#ff5c8
 
 const S = {
   ch: 0, stim: '1000', level: 70, cond: 'normal',
-  playing: !REDUCED, labels: true, glow: !MOBILE, speed: 1, tour: false,
+  playing: !REDUCED, labels: true, glow: !MOBILE && !COARSE, speed: 1, tour: false,
 };
 
 // ---------------------------------------------------------------- renderer
@@ -54,14 +56,14 @@ const rim = new THREE.DirectionalLight(0x74d9ff, 0.9); rim.position.set(200, 120
 const fill = new THREE.DirectionalLight(0xffc9a8, 0.35); fill.position.set(-100, -150, 60); scene.add(fill);
 
 const composer = new EffectComposer(renderer);
-composer.addPass(new RenderPass(scene, camera));
+composer.addPass(new RenderPass(scene, camera)); composer.addPass(nanGuard());
 const bloom = new UnrealBloomPass(new THREE.Vector2(512, 512), 0.55, 0.5, 0.72);
 composer.addPass(bloom);
 composer.addPass(new OutputPass());
 
 function resize() {
   const w = stage.clientWidth, h = stage.clientHeight;
-  renderer.setSize(w, h, false);
+  { const pr = Math.min(devicePixelRatio || 1, MOBILE || COARSE ? 1.5 : 2, Math.sqrt(3.2e6 / (w * h))); if (renderer.getPixelRatio() !== pr) { renderer.setPixelRatio(pr); composer.setPixelRatio(pr); } } renderer.setSize(w, h, false);
   labelRenderer.setSize(w, h);
   composer.setSize(w, h);
   bloom.resolution.set(w / 2, h / 2);
@@ -77,9 +79,9 @@ function shellMat(hex, power = 2.2) {
   return new THREE.ShaderMaterial({
     uniforms: { uColor: { value: new THREE.Color(hex) }, uOpacity: { value: 0 }, uPower: { value: power } },
     vertexShader: `varying vec3 vN; varying vec3 vV;
-      void main(){ vec4 mv = modelViewMatrix * vec4(position,1.0); vN = normalize(normalMatrix*normal); vV = normalize(-mv.xyz); gl_Position = projectionMatrix*mv; }`,
+      void main(){ vec4 mv = modelViewMatrix * vec4(position,1.0); vN = normalMatrix*normal; vV = -mv.xyz; gl_Position = projectionMatrix*mv; }`,
     fragmentShader: `uniform vec3 uColor; uniform float uOpacity; uniform float uPower; varying vec3 vN; varying vec3 vV;
-      void main(){ float f = pow(1.0 - abs(dot(normalize(vN), normalize(vV))), uPower);
+      void main(){ vec3 n = vN; float ln = length(n); n = ln > 1e-6 ? n / ln : vec3(0.0, 0.0, 1.0); vec3 v = vV; float lv = length(v); v = lv > 1e-6 ? v / lv : vec3(0.0, 0.0, 1.0); float f = pow(max(1.0 - clamp(abs(dot(n, v)), 0.0, 1.0), 1e-4), uPower);
         gl_FragColor = vec4(uColor*(0.25+1.25*f), uOpacity*(0.12+0.88*f)); }`,
     transparent: true, depthWrite: false, side: THREE.DoubleSide,
   });
@@ -951,3 +953,13 @@ renderChapters(); renderCard();
 resize();
 requestAnimationFrame(frame);
 window.__hear = { S, setChapter, W, NODES };
+
+// Replaces NaN / Inf pixels with black before bloom: on some phone GPUs a single invalid pixel is
+// spread by the bloom blur into flickering black boxes.
+function nanGuard() {
+  return new ShaderPass({
+    uniforms: { tDiffuse: { value: null } },
+    vertexShader: 'varying vec2 vUv; void main(){ vUv = uv; gl_Position = projectionMatrix*modelViewMatrix*vec4(position,1.0); }',
+    fragmentShader: 'uniform sampler2D tDiffuse; varying vec2 vUv; void main(){ vec4 c = texture2D(tDiffuse, vUv); bool bad = !(c.r == c.r) || !(c.g == c.g) || !(c.b == c.b) || !(c.a == c.a) || c.r > 6e4 || c.g > 6e4 || c.b > 6e4; gl_FragColor = bad ? vec4(0.0, 0.0, 0.0, 1.0) : clamp(c, 0.0, 64.0); }',
+  });
+}

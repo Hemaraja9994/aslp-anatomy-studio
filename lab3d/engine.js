@@ -10,6 +10,7 @@ import { EffectComposer } from 'three/addons/postprocessing/EffectComposer.js';
 import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';
 import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js';
 import { OutputPass } from 'three/addons/postprocessing/OutputPass.js';
+import { ShaderPass } from 'three/addons/postprocessing/ShaderPass.js';
 import { CSS2DRenderer, CSS2DObject } from 'three/addons/renderers/CSS2DRenderer.js';
 
 export { THREE };
@@ -19,6 +20,7 @@ export const clamp = (x, a, b) => Math.max(a, Math.min(b, x));
 export const lerp = (a, b, t) => a + (b - a) * t;
 export const smooth = (x) => { x = clamp(x, 0, 1); return x * x * (3 - 2 * x); };
 export const MOBILE = matchMedia('(max-width: 900px)').matches;
+export const COARSE = matchMedia('(pointer: coarse)').matches;
 export const REDUCED = matchMedia('(prefers-reduced-motion: reduce)').matches;
 export const CSS = { air: '#5fe3f2', mech: '#f3b64a', fluid: '#7d95ff', neural: '#ff5c8a', elec: '#b8f36a', bad: '#ff8a5c', ok: '#58d38c', ink: '#e9eff6', muted: '#8fa2b7', dim: '#5d6f83', violet: '#a987ee' };
 export const COL = Object.fromEntries(Object.entries(CSS).map(([k, v]) => [k, new THREE.Color(v).getHex()]));
@@ -27,8 +29,8 @@ export const COL = Object.fromEntries(Object.entries(CSS).map(([k, v]) => [k, ne
 export function shellMat(hex, power = 2.2) {
   return new THREE.ShaderMaterial({
     uniforms: { uColor: { value: new THREE.Color(hex) }, uOpacity: { value: 0 }, uPower: { value: power } },
-    vertexShader: 'varying vec3 vN; varying vec3 vV; void main(){ vec4 mv = modelViewMatrix*vec4(position,1.0); vN = normalize(normalMatrix*normal); vV = normalize(-mv.xyz); gl_Position = projectionMatrix*mv; }',
-    fragmentShader: 'uniform vec3 uColor; uniform float uOpacity; uniform float uPower; varying vec3 vN; varying vec3 vV; void main(){ float f = pow(1.0-abs(dot(normalize(vN),normalize(vV))), uPower); gl_FragColor = vec4(uColor*(0.25+1.25*f), uOpacity*(0.12+0.88*f)); }',
+    vertexShader: 'varying vec3 vN; varying vec3 vV; void main(){ vec4 mv = modelViewMatrix*vec4(position,1.0); vN = normalMatrix*normal; vV = -mv.xyz; gl_Position = projectionMatrix*mv; }',
+    fragmentShader: 'uniform vec3 uColor; uniform float uOpacity; uniform float uPower; varying vec3 vN; varying vec3 vV; void main(){ vec3 n = vN; float ln = length(n); n = ln > 1e-6 ? n / ln : vec3(0.0, 0.0, 1.0); vec3 v = vV; float lv = length(v); v = lv > 1e-6 ? v / lv : vec3(0.0, 0.0, 1.0); float f = pow(max(1.0 - clamp(abs(dot(n, v)), 0.0, 1.0), 1e-4), uPower); gl_FragColor = vec4(uColor*(0.25+1.25*f), uOpacity*(0.12+0.88*f)); }',
     transparent: true, depthWrite: false, side: THREE.DoubleSide,
   });
 }
@@ -51,7 +53,7 @@ export const tube = (pts, r, m, seg = 40, rs = 12) => new THREE.Mesh(new THREE.T
 
 // ---------------------------------------------------------------- lab
 export function createLab(cfg) {
-  const S = Object.assign({ ch: 0, playing: !REDUCED, labels: true, glow: !MOBILE, speed: 1, tour: false }, cfg.state || {});
+  const S = Object.assign({ ch: 0, playing: !REDUCED, labels: true, glow: !MOBILE && !COARSE, speed: 1, tour: false }, cfg.state || {});
   const stage = $('stage');
   const renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: 'high-performance', preserveDrawingBuffer: false });
   renderer.setPixelRatio(Math.min(devicePixelRatio || 1, MOBILE ? 1.5 : 2));
@@ -67,13 +69,13 @@ export function createLab(cfg) {
   const key = new THREE.DirectionalLight(0xffffff, 1.7); key.position.set(-220, 260, 180); lights.add(key);
   const rim = new THREE.DirectionalLight(0x74d9ff, 0.9); rim.position.set(200, 120, -240); lights.add(rim);
   const fill = new THREE.DirectionalLight(0xffe2c8, 0.5); fill.position.set(150, -80, 220); lights.add(fill);
-  const composer = new EffectComposer(renderer); composer.addPass(new RenderPass(scene, camera));
+  const composer = new EffectComposer(renderer); composer.addPass(new RenderPass(scene, camera)); composer.addPass(nanGuard());
   const bloom = new UnrealBloomPass(new THREE.Vector2(512, 512), 0.38, 0.45, 0.84); composer.addPass(bloom); composer.addPass(new OutputPass());
   const ctx = { THREE, S, scene, camera, controls, renderer, lights, meshes: {}, byName: {}, W: {}, $, V, clamp, lerp, smooth, CSS, COL, std, solid, shellMat, sprite, glowTex, tube, setOp, getOp, MOBILE, cfg, bg: null };
   const offset = cfg.viewOffset !== false;
   function resize() {
     const w = stage.clientWidth, h = stage.clientHeight; if (!w || !h) return;
-    renderer.setSize(w, h, false); labelRenderer.setSize(w, h); composer.setSize(w, h); bloom.resolution.set(w / 2, h / 2);
+    { const pr = Math.min(devicePixelRatio || 1, MOBILE || COARSE ? 1.5 : 2, Math.sqrt(3.2e6 / (w * h))); if (renderer.getPixelRatio() !== pr) { renderer.setPixelRatio(pr); composer.setPixelRatio(pr); } } renderer.setSize(w, h, false); labelRenderer.setSize(w, h); composer.setSize(w, h); bloom.resolution.set(w / 2, h / 2);
     camera.aspect = w / h;
     if (offset && !MOBILE && w > 900) camera.setViewOffset(w, h, w > 1280 ? 95 : 80, 45, w, h); else camera.clearViewOffset();
     camera.updateProjectionMatrix();
@@ -136,6 +138,7 @@ export function createLab(cfg) {
     scene.add(g.scene); g.scene.updateMatrixWorld(true);
     g.scene.traverse((o) => {
       if (!o.isMesh) return;
+      fixNormals(o.geometry);
       const ud = Object.keys(o.userData).length ? o.userData : o.parent.userData;
       const name = ud.name || o.name;
       if (m.skip && m.skip.test(name)) { o.visible = false; o.userData.skip = true; return; }
@@ -290,3 +293,23 @@ export function canvasCtx(cv) {
   return { g, w: r.width, h: r.height };
 }
 export function pill(st, text) { return `<span class="pill ${st}">${text}</span>`; }
+
+// Replaces NaN / Inf pixels with black before bloom: on some phone GPUs a single invalid pixel is
+// spread by the bloom blur into flickering black boxes.
+function nanGuard() {
+  return new ShaderPass({
+    uniforms: { tDiffuse: { value: null } },
+    vertexShader: 'varying vec2 vUv; void main(){ vUv = uv; gl_Position = projectionMatrix*modelViewMatrix*vec4(position,1.0); }',
+    fragmentShader: 'uniform sampler2D tDiffuse; varying vec2 vUv; void main(){ vec4 c = texture2D(tDiffuse, vUv); bool bad = !(c.r == c.r) || !(c.g == c.g) || !(c.b == c.b) || !(c.a == c.a) || c.r > 6e4 || c.g > 6e4 || c.b > 6e4; gl_FragColor = bad ? vec4(0.0, 0.0, 0.0, 1.0) : clamp(c, 0.0, 64.0); }',
+  });
+}
+// Replace zero-length or invalid vertex normals (from simplification / quantisation) so shading never
+// produces NaN.
+function fixNormals(geo) {
+  const n = geo && geo.attributes && geo.attributes.normal; if (!n) return;
+  let bad = 0;
+  for (let i = 0; i < n.count; i++) { const x = n.getX(i), y = n.getY(i), z = n.getZ(i), l = Math.hypot(x, y, z); if (!(l > 1e-3)) bad++; }
+  if (!bad) return;
+  geo.deleteAttribute('normal'); geo.computeVertexNormals();
+  const m = geo.attributes.normal; for (let i = 0; i < m.count; i++) { if (!(Math.hypot(m.getX(i), m.getY(i), m.getZ(i)) > 1e-3)) m.setXYZ(i, 0, 1, 0); }
+}

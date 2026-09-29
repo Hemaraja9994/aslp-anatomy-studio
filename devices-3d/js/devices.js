@@ -8,6 +8,7 @@ import { EffectComposer } from 'three/addons/postprocessing/EffectComposer.js';
 import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';
 import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js';
 import { OutputPass } from 'three/addons/postprocessing/OutputPass.js';
+import { ShaderPass } from 'three/addons/postprocessing/ShaderPass.js';
 import { CSS2DRenderer, CSS2DObject } from 'three/addons/renderers/CSS2DRenderer.js';
 import { RoundedBoxGeometry } from 'three/addons/geometries/RoundedBoxGeometry.js';
 import * as P from '../../hearing-3d/js/physio.js';
@@ -16,12 +17,13 @@ const $ = (id) => document.getElementById(id);
 const V = (x, y, z) => new THREE.Vector3(x, y, z);
 const clamp = P.clamp;
 const MOBILE = matchMedia('(max-width: 900px)').matches;
+const COARSE = matchMedia('(pointer: coarse)').matches;
 const REDUCED = matchMedia('(prefers-reduced-motion: reduce)').matches;
 const COL = { air: 0x5fe3f2, mech: 0xf3b64a, fluid: 0x7d95ff, neural: 0xff5c8a, elec: 0xb8f36a, bad: 0xff8a5c };
 const CSS = { air: '#5fe3f2', mech: '#f3b64a', fluid: '#7d95ff', neural: '#ff5c8a', elec: '#b8f36a', bad: '#ff8a5c', ink: '#e9eff6', muted: '#8fa2b7', dim: '#5d6f83' };
 const FREQS = [250, 500, 1000, 2000, 4000, 8000];
 
-const S = { ch: 0, f: 1000, level: 65, cond: 'mildmod', custom: 'ite', bc: 'perc', playing: !REDUCED, labels: true, glow: !MOBILE, speed: 1, tour: false };
+const S = { ch: 0, f: 1000, level: 65, cond: 'mildmod', custom: 'ite', bc: 'perc', playing: !REDUCED, labels: true, glow: !MOBILE && !COARSE, speed: 1, tour: false };
 
 // ================================================================ candidacy
 const DEVICES = ['bte', 'ric', 'custom', 'bc', 'mei', 'ci', 'abi'];
@@ -81,12 +83,12 @@ const key = new THREE.DirectionalLight(0xffffff, 1.7); key.position.set(-220, 26
 const rim = new THREE.DirectionalLight(0x74d9ff, 0.9); rim.position.set(200, 120, -240); scene.add(rim);
 const back = new THREE.DirectionalLight(0xffe2c8, 0.8); back.position.set(-150, 80, -260); scene.add(back);
 const composer = new EffectComposer(renderer);
-composer.addPass(new RenderPass(scene, camera));
+composer.addPass(new RenderPass(scene, camera)); composer.addPass(nanGuard());
 const bloom = new UnrealBloomPass(new THREE.Vector2(512, 512), 0.55, 0.5, 0.72);
 composer.addPass(bloom); composer.addPass(new OutputPass());
 function resize() {
   const w = stage.clientWidth, h = stage.clientHeight;
-  renderer.setSize(w, h, false); labelRenderer.setSize(w, h); composer.setSize(w, h); bloom.resolution.set(w / 2, h / 2);
+  { const pr = Math.min(devicePixelRatio || 1, MOBILE || COARSE ? 1.5 : 2, Math.sqrt(3.2e6 / (w * h))); if (renderer.getPixelRatio() !== pr) { renderer.setPixelRatio(pr); composer.setPixelRatio(pr); } } renderer.setSize(w, h, false); labelRenderer.setSize(w, h); composer.setSize(w, h); bloom.resolution.set(w / 2, h / 2);
   camera.aspect = w / h;
   if (!MOBILE && w > 900) camera.setViewOffset(w, h, w > 1280 ? 95 : 80, 45, w, h); else camera.clearViewOffset();
   camera.updateProjectionMatrix();
@@ -97,9 +99,9 @@ new ResizeObserver(resize).observe(stage);
 function shellMat(hex, power = 2.2) {
   return new THREE.ShaderMaterial({
     uniforms: { uColor: { value: new THREE.Color(hex) }, uOpacity: { value: 0 }, uPower: { value: power } },
-    vertexShader: `varying vec3 vN; varying vec3 vV; void main(){ vec4 mv = modelViewMatrix*vec4(position,1.0); vN = normalize(normalMatrix*normal); vV = normalize(-mv.xyz); gl_Position = projectionMatrix*mv; }`,
+    vertexShader: `varying vec3 vN; varying vec3 vV; void main(){ vec4 mv = modelViewMatrix*vec4(position,1.0); vN = normalMatrix*normal; vV = -mv.xyz; gl_Position = projectionMatrix*mv; }`,
     fragmentShader: `uniform vec3 uColor; uniform float uOpacity; uniform float uPower; varying vec3 vN; varying vec3 vV;
-      void main(){ float f = pow(1.0-abs(dot(normalize(vN),normalize(vV))), uPower); gl_FragColor = vec4(uColor*(0.25+1.25*f), uOpacity*(0.12+0.88*f)); }`,
+      void main(){ vec3 n = vN; float ln = length(n); n = ln > 1e-6 ? n / ln : vec3(0.0, 0.0, 1.0); vec3 v = vV; float lv = length(v); v = lv > 1e-6 ? v / lv : vec3(0.0, 0.0, 1.0); float f = pow(max(1.0 - clamp(abs(dot(n, v)), 0.0, 1.0), 1e-4), uPower); gl_FragColor = vec4(uColor*(0.25+1.25*f), uOpacity*(0.12+0.88*f)); }`,
     transparent: true, depthWrite: false, side: THREE.DoubleSide,
   });
 }
@@ -910,3 +912,13 @@ const _set = setChapter; // eslint-disable-line no-unused-vars
 if (MOBILE) $('hint').textContent = 'Drag to orbit · pinch to zoom';
 renderAll(); resize(); requestAnimationFrame(frame);
 window.__dev = { S, setChapter: (i, x) => { setChapter(i, x); refresh(); }, W, D, NODES };
+
+// Replaces NaN / Inf pixels with black before bloom: on some phone GPUs a single invalid pixel is
+// spread by the bloom blur into flickering black boxes.
+function nanGuard() {
+  return new ShaderPass({
+    uniforms: { tDiffuse: { value: null } },
+    vertexShader: 'varying vec2 vUv; void main(){ vUv = uv; gl_Position = projectionMatrix*modelViewMatrix*vec4(position,1.0); }',
+    fragmentShader: 'uniform sampler2D tDiffuse; varying vec2 vUv; void main(){ vec4 c = texture2D(tDiffuse, vUv); bool bad = !(c.r == c.r) || !(c.g == c.g) || !(c.b == c.b) || !(c.a == c.a) || c.r > 6e4 || c.g > 6e4 || c.b > 6e4; gl_FragColor = bad ? vec4(0.0, 0.0, 0.0, 1.0) : clamp(c, 0.0, 64.0); }',
+  });
+}
